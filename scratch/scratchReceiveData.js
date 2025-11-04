@@ -13,28 +13,39 @@
   limitations under the License.
 */
 
-const g = require('../index.js');
+const g = require("../index.js");
 
 async function run() {
-  let f = await g.find({});
-  let l = f.sources();
-  console.log('>>> FOUND >>>', l);
-  let r = await g.receive({ source: l[0] });
-  console.log('>>> RECEIVER >>>', r);
-  for ( let x = 0 ; x < 1000 ; x++ ) {
-    let d = await r.data({ audioFormat : g.AUDIO_FORMAT_INT_16_INTERLEAVED, referenceLevel: 0 });
-    console.log('>>> DATA >>>', d.type);
-    // console.log(a.data.length);
-    v = null;
-  }
-  l = null;
-  r = null;
-  d = null;
-  console.log(process.memoryUsage());
-  setTimeout(() => { global.gc();
-    console.log("that's almost all folks", process.memoryUsage()); }, 1000);
-  setTimeout(() => {   global.gc(); console.log("that's it", process.memoryUsage()); }, 2000);
-  setTimeout(() => {   global.gc(); console.log("that's really it", process.memoryUsage()); }, 3000);
+	const f = await g.find({});
+	let l = f.sources();
+	console.log(">>> FOUND >>>", l);
+	let r = await g.receive({ source: l[0] });
+	console.log(">>> RECEIVER >>>", r);
+	for (let x = 0; x < 1000; x++) {
+		const d = await r.data({
+			audioFormat: g.AUDIO_FORMAT_INT_16_INTERLEAVED,
+			referenceLevel: 0,
+		});
+		console.log(">>> DATA >>>", d.type);
+		// console.log(a.data.length);
+		v = null;
+	}
+	l = null;
+	r = null;
+	d = null;
+	console.log(process.memoryUsage());
+	setTimeout(() => {
+		global.gc();
+		console.log("that's almost all folks", process.memoryUsage());
+	}, 1000);
+	setTimeout(() => {
+		global.gc();
+		console.log("that's it", process.memoryUsage());
+	}, 2000);
+	setTimeout(() => {
+		global.gc();
+		console.log("that's really it", process.memoryUsage());
+	}, 3000);
 }
 
 run();

@@ -13,14 +13,13 @@
   limitations under the License.
 */
 
-const g = require('../index.js');
+const g = require("../index.js");
 
-;(async () => {
-    const finder = await g.find({ showLocalSources: true })
-    setInterval(() => {
-        const sources = finder.sources()
-        console.log(sources)
-        finder.wait()
-    }, 1000)
-})()
-
+(async () => {
+	const finder = await g.find({ showLocalSources: true });
+	setInterval(() => {
+		const sources = finder.sources();
+		console.log(sources);
+		finder.wait();
+	}, 1000);
+})();

@@ -13,7 +13,6 @@
   limitations under the License.
 */
 
-const g = require('../index.js');
+const g = require("../index.js");
 
-console.log(g.version())
-
+console.log(g.version());

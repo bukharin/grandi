@@ -13,20 +13,19 @@
   limitations under the License.
 */
 
-const g = require('../index.js');
+const g = require("../index.js");
 
-;(async () => {
-    const f = await g.find({})
-    const sources = f.sources()
-    console.log(sources[0])
+(async () => {
+	const f = await g.find({});
+	const sources = f.sources();
+	console.log(sources[0]);
 
-    const r = await g.routing({ name: "ROUTER-1" })
-    console.log(r.connections())
-    console.log(r.sourcename())
-    console.log(r.change(sources[0]))
-    setInterval(() => {
-        console.log(r.connections())
-    }, 1000)
-    // r.destroy()
-})()
-
+	const r = await g.routing({ name: "ROUTER-1" });
+	console.log(r.connections());
+	console.log(r.sourcename());
+	console.log(r.change(sources[0]));
+	setInterval(() => {
+		console.log(r.connections());
+	}, 1000);
+	// r.destroy()
+})();
