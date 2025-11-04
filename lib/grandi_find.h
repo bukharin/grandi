@@ -14,15 +14,16 @@
 **  limitations under the License.
 */
 
-#ifndef GRANDIOSE_FIND_H
-#define GRANDIOSE_FIND_H
+#ifndef GRANDI_FIND_H
+#define GRANDI_FIND_H
 
 #include "node_api.h"
-#include "grandiose_util.h"
+#include "grandi_util.h"
 
 napi_value find(napi_env, napi_callback_info);
 
-struct findCarrier: carrier {
+struct findCarrier : carrier
+{
     bool show_local_sources = true;
     char *groups = nullptr;
     char *extra_ips = nullptr;
@@ -30,7 +31,8 @@ struct findCarrier: carrier {
     uint32_t wait = 10000;
     uint32_t no_sources = 0;
     const NDIlib_source_t *sources;
-    ~findCarrier() {
+    ~findCarrier()
+    {
         if (groups != nullptr)
             free(groups);
         if (extra_ips != nullptr)
@@ -38,5 +40,4 @@ struct findCarrier: carrier {
     }
 };
 
-#endif /* GRANDIOSE_FIND_H */
-
+#endif /* GRANDI_FIND_H */

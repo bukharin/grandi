@@ -13,35 +13,38 @@
   limitations under the License.
 */
 
-#ifndef GRANDIOSE_SEND_H
-#define GRANDIOSE_SEND_H
+#ifndef GRANDI_SEND_H
+#define GRANDI_SEND_H
 
 #include "node_api.h"
-#include "grandiose_util.h"
+#include "grandi_util.h"
 
 napi_value send(napi_env env, napi_callback_info info);
 
-struct sendCarrier : carrier {
-  char* name = nullptr;
-  char* groups = nullptr;
+struct sendCarrier : carrier
+{
+  char *name = nullptr;
+  char *groups = nullptr;
   bool clockVideo = false;
   bool clockAudio = false;
   NDIlib_send_instance_t send;
-  ~sendCarrier() {
+  ~sendCarrier()
+  {
     free(name);
   }
 };
 
-struct sendDataCarrier : carrier {
+struct sendDataCarrier : carrier
+{
   NDIlib_send_instance_t send;
   NDIlib_video_frame_v2_t videoFrame;
   NDIlib_audio_frame_v3_t audioFrame;
   NDIlib_metadata_frame_t metadataFrame;
   napi_ref sourceBufferRef = nullptr;
-  ~sendDataCarrier() {
+  ~sendDataCarrier()
+  {
     // TODO: free sourceBufferRef
   }
 };
 
-
-#endif /* GRANDIOSE_SEND_H */
+#endif /* GRANDI_SEND_H */

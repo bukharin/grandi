@@ -1,0 +1,21 @@
+Grandi
+
+Copyright (c) 2025 Grandi contributors
+
+This product includes software developed by Streampunk Media Ltd. and is
+derived in part from the project "Grandiose":
+  https://github.com/Streampunk/grandiose
+licensed under the Apache License, Version 2.0.
+
+Portions Copyright (c) 2018 Streampunk Media Ltd.
+
+This project also retains and extends features originating from community forks,
+including (but not limited to):
+  - https://github.com/rse/grandiose
+  - https://github.com/danjenkins/grandiose
+  - https://github.com/ianshade/grandiose
+These upstream materials are used under the terms of the Apache License, Version 2.0.
+
+NDI is a trademark of NewTek, Inc. NewTek NDI SDK headers/libraries are subject
+to their respective licenses as provided by NewTek (see the repository's
+license exceptions and the contents of the lib/ folder).

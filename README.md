@@ -1,30 +1,31 @@
-# Grandiose
+# Grandi
 [Node.js](http://nodejs.org/) native bindings to NewTek NDI(tm). For more information on NDI(tm), see:
 
 https://www.ndi.tv/
 
-This module will allow a Node.JS program to find, receive and send NDI(tm) video, audio and metadata streams over IP networks. All calls a asynchronous and use Javascript promises with all of the underlying work of NDI running on separate threads from the event loop.
+This module allows a Node.js program to find, receive and send NDI(tm) video, audio and metadata streams over IP networks. All calls are asynchronous and use JavaScript promises with all of the underlying work of NDI running on separate threads from the event loop.
 
-NDI(tm) is a realisation of a grand vision for what IP media streams should and can be, hence a steampunk themed name of _gra-NDI-ose_.
+NDI(tm) is a realisation of a grand vision for what IP media streams should and can be.
 
 Fork Information
 ----------------
 
-This is [Dr. Ralf S. Engelschall](http://engelschall.com)'s indirect fork
-of the original [Streampunk Grandiose](https://github.com/Streampunk/grandiose) codebase.
-The differences against the original codebase are:
+Grandi is a maintained fork of the original [Streampunk Grandiose](https://github.com/Streampunk/grandiose) project. It keeps the familiar API while modernizing the codebase and expanding functionality:
 
+- TypeScript-focused rewrite with complete binding coverage.
+- Improved NDI SDK handling (versioning, download/packaging, and portability improvements).
+- Added utilities to make common workflows easier.
 - audio frame sending support from the [rse/grandiose](https://github.com/rse/grandiose) fork.
-- ad-hoc download of NDI SDK 5.0.0 from the [rse/grandiose](https://github.com/rse/grandiose) fork.
-- portability fixes for clean compile under Windows, macOS and Linux from the [rse/grandiose](https://github.com/rse/grandiose) fork.
-- portability fixes for macOS from the [danjenkins/grandiose](https://github.com/danjenkins/grandiose) fork.
+- ad-hoc download of NDI SDK from the [rse/grandiose](https://github.com/rse/grandiose) fork.
+- Portability fixes for clean compile under Windows, macOS and Linux from the [rse/grandiose](https://github.com/rse/grandiose) fork.
+- Portability fixes for macOS from the [danjenkins/grandiose](https://github.com/danjenkins/grandiose) fork.
 - NDI Sender functionality from the [ianshade/grandiose](https://github.com/ianshade/grandiose) fork.
-- TypeScript type definitions from the [ianshade/grandiose](https://github.com/ianshade/grandiose) fork.
-- NDI Routing functionality from scratch.
+- Initial TypeScript type definitions from the [ianshade/grandiose](https://github.com/ianshade/grandiose) fork.
+- NDI Routing functionality from the [hopejr/grandiose](https://github.com/hopejr/grandiose) fork.
 
 ## Installation
 
-Grandiose supports the Windows/x86, Windows/x64, macOS/x64, Linux/x86 and Linux/x64 platforms at this time only.
+Grandi supports the Windows/x86, Windows/x64, macOS/x64, Linux/x86 and Linux/x64 platforms at this time only.
 
 Install [Node.js](http://nodejs.org/) for your platform. This software has been developed against the long term stable (LTS) release.
 
@@ -32,20 +33,20 @@ On Windows, the NDI(tm) DLL requires that the Visual Studio 2013 C run-times are
 
 https://www.microsoft.com/en-us/download/details.aspx?id=40784
 
-Grandiose is designed to be `require`d to use from your own application to provide async processing. For example:
+Grandi is designed to be `require`d to use from your own application to provide async processing. For example:
 
-    npm install --save grandiose
+    npm install --save grandi
 
-## Using grandiose
+## Using Grandi
 
 ### Finding streams
 
 A list of all currently available NDI(tm) sources available on the current local area network (or VLAN) can be retrieved. For example, to print a list of sources to the console, try:
 
 ```javascript
-const grandiose = require('grandiose');
+const grandi = require('grandi');
 
-grandiose.find()
+grandi.find()
   .then(console.log)
   .catch(console.error);
 ```
@@ -63,12 +64,12 @@ The result is an array, for example here are some local sources to machine :
 
 The find operation can be configured with an options object and a wait time in measured in milliseconds:
 
-    grandiose.find(<opts>, <wait_time>);
+    grandi.find(<opts>, <wait_time>);
 
 The options are as follows:
 
 ```javascript
-grandiose.find({
+grandi.find({
   // Should sources on the same system be found?
   showLocalSources: true,
   // Show only sources in a named group. May be an array.
@@ -84,14 +85,14 @@ grandiose.find({
 First of all, find a stream using the method above or create an object representing a source:
 
 ```javascript
-const grandiose = require('grandiose');
+const grandi = require('grandi');
 let source = { name: "<source_name>", urlAddress: "<IP-address>:<port>" };
 ```
 
 In an `async` function, create a receiver as follows:
 
 ```javascript
-let receiver = await grandiose.receive({ source: source });
+let receiver = await grandi.receive({ source: source });
 ```
 
 An example of the receiver object resolved by this promise is shown below:
@@ -105,8 +106,8 @@ An example of the receiver object resolved by this promise is shown below:
   source:
    { name: 'LEMARR (Test Pattern)',
      urlAddress: '169.254.82.1:5961' },
-  colorFormat: 100, // grandiose.COLOR_FORMAT_FASTEST
-  bandwidth: 100,   // grandiose.BANDWIDTH_HIGHEST
+  colorFormat: 100, // grandi.COLOR_FORMAT_FASTEST
+  bandwidth: 100,   // grandi.BANDWIDTH_HIGHEST
   allowVideoFields: true }
 ```
 
@@ -115,17 +116,17 @@ The `embedded` value is the native receiver returned by the NDI(tm) SDK. The `vi
 The `colorFormat`, `bandwidth` and `allowVideoFields` parameters are those used to set up the receiver. These can be configured as options when creating the receiver as follows:
 
 ```javascript
-let receiver = await grandiose.receive({
+let receiver = await grandi.receive({
   source: source, // required source parameter
   // Preferred colour space - without and with alpha channel
   // One of COLOR_FORMAT_RGBX_RGBA, COLOR_FORMAT_BGRX_BGRA,
   //   COLOR_FORMAT_UYVY_RGBA, COLOR_FORMAT_UYVY_BGRA or
   //   the default of COLOR_FORMAT_FASTEST
-  colorFormat: grandiose.COLOR_FORMAT_UYVY_RGBA,
-  // Select bandwidth level. One of grandiose.BANDWIDTH_METADATA_ONLY,
+  colorFormat: grandi.COLOR_FORMAT_UYVY_RGBA,
+  // Select bandwidth level. One of grandi.BANDWIDTH_METADATA_ONLY,
   //   BANDWIDTH_AUDIO_ONLY, BANDWIDTH_LOWEST and the default value
   //   of BANDWIDTH_HIGHEST
-  bandwidth: grandiose.BANDWIDTH_AUDIO_ONLY,
+  bandwidth: grandi.BANDWIDTH_AUDIO_ONLY,
   // Set to false to receive only progressive video frames
   allowVideoFields: true, // default is true
   // An optional name for the receiver, otherwise one will be generated
@@ -157,7 +158,7 @@ Here is the output associated with a video frame created by an NDI(tm) test patt
   frameRateD: 1001,
   pictureAspectRatio: 1.7777777910232544, // 16:9
   timestamp: [ 1538569443, 717845600 ], // PTP timestamp
-  frameFormatType: 1, // grandiose.FORMAT_TYPE_INTERLACED
+  frameFormatType: 1, // grandi.FORMAT_TYPE_INTERLACED
   timecode: [ 0, 0 ], // Measured in nanoseconds
   lineStrideBytes: 3840,
   data: <Buffer 80 10 80 10 80 10 80 10 ... > }
@@ -177,10 +178,10 @@ Audio follows a similar pattern to video, except that a couple of options are av
 let timeout = 8000; // Optional timeout value in ms
 let audioFrame = await receiver.audio({
     // One of three audio formats that NDI(tm) utilities can provide:
-    //  grandiose.AUDIO_FORMAT_INT_16_INTERLEAVED,
+    //  grandi.AUDIO_FORMAT_INT_16_INTERLEAVED,
     //  AUDIO_FORMAT_FLOAT_32_INTERLEAVED and the default value of
     //  AUDIO_FORMAT_FLOAT_32_SEPARATE
-    audioFormat: grandiose.AUDIO_FORMAT_INT_16_INTERLEAVED,
+    audioFormat: grandi.AUDIO_FORMAT_INT_16_INTERLEAVED,
     // The audio reference level in dB. This specifies how many dB above
     // the reference level (+4dBU) is the full range of integer audio.
     referenceLevel: 0 // default is 0dB
@@ -191,7 +192,7 @@ An example of an audio frame resolved from this promise is:
 
 ```javascript
 { type: 'audio',
-  audioFormat: 2, // grandiose.AUDIO_FORMAT_INT_16_INTERLEAVED
+  audioFormat: 2, // grandi.AUDIO_FORMAT_INT_16_INTERLEAVED
   referenceLevel: 0, // 0dB above reference level
   sampleRate: 48000, // Hz
   channels: 4,
@@ -224,29 +225,29 @@ else if (dataFrame.type == 'metadata') { console.log(dataFrame.data); }
 
 ### Sending streams
 
-To follow.
+Sending is supported; examples and utilities are provided in this package. More comprehensive documentation to follow.
 
 ### Other
 
 To find out the version of NDI(tm), use:
 
-    grandiose.version(); // e.g. 'NDI SDK WIN64 00:29:47 Jun 26 2018 3.5.9.0'
+    grandi.version(); // e.g. 'NDI SDK WIN64 00:29:47 Jun 26 2018 3.5.9.0'
 
 To check if the installed CPU is supported for NDI(tm), use:
 
-    grandiose.isSupportedCPU(); // e.g. true
+    grandi.isSupportedCPU(); // e.g. true
 
 ## Status, support and further development
 
-Support for sending streams is in progress. Support for x86, Mac and Linux platforms is being considered.
+Support for sending streams is available. Support for x86, Mac and Linux platforms is provided as noted above.
 
-Although the architecture of grandiose is such that it could be used at scale in production environments, development is not yet complete. In its current state, it is recommended that this software is used in development environments and for building prototypes. Future development will make this more appropriate for production use.
-
-Contributions can be made via pull requests and will be considered by the author on their merits. Enhancement requests and bug reports should be raised as github issues. For support, please contact [Streampunk Media](http://www.streampunk.media/).
+Contributions can be made via pull requests and will be considered by the author on their merits. Enhancement requests and bug reports should be raised as GitHub issues.
 
 ## License
 
-Apart from the exceptions in the following section, this software is released under the Apache 2.0 license. Copyright 2018 Streampunk Media Ltd.
+ Apart from the exceptions in the following section, this software is released under the Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
+
+ Attribution: This is a maintained fork of Streampunk Grandiose. Portions are derived from the original Grandiose project and community forks under the Apache 2.0 license. See the [NOTICE](./NOTICE.md) file for attribution details.
 
 ### License exceptions
 

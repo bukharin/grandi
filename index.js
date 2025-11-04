@@ -17,18 +17,18 @@ const path = require("path")
 
 const addon = isSupportedPlatform()
   ? require('bindings')({
-    bindings: "grandiose",
+    bindings: "grandi",
     module_root: path.resolve(__dirname)
   })
   : {
-    version () { return null },
-    isSupportedCPU () { return false },
-    initialize () { return null },
-    destroy () { return null },
-    send () { return null },
-    receive () { return null },
-    routing () { return null },
-    find: { apply () { return null } }
+    version() { return null },
+    isSupportedCPU() { return false },
+    initialize() { return null },
+    destroy() { return null },
+    send() { return null },
+    receive() { return null },
+    routing() { return null },
+    find: { apply() { return null } }
   }
 
 const COLOR_FORMAT_BGRX_BGRA = 0; // No alpha channel: BGRX, Alpha channel: BGRA
@@ -37,7 +37,7 @@ const COLOR_FORMAT_RGBX_RGBA = 2; // No alpha channel: RGBX, Alpha channel: RGBA
 const COLOR_FORMAT_UYVY_RGBA = 3; // No alpha channel: UYVY, Alpha channel: RGBA
 
 const NDI_LIB_FOURCC = (ch0, ch1, ch2, ch3) =>
-	(ch0.charCodeAt(0) | (ch1.charCodeAt(0) << 8) | (ch2.charCodeAt(0) << 16) | (ch3.charCodeAt(0) << 24))
+  (ch0.charCodeAt(0) | (ch1.charCodeAt(0) << 8) | (ch2.charCodeAt(0) << 16) | (ch3.charCodeAt(0) << 24))
 
 const FOURCC_UYVY = NDI_LIB_FOURCC("U", "Y", "V", "Y")
 const FOURCC_UYVA = NDI_LIB_FOURCC("U", "Y", "V", "A")
@@ -61,9 +61,9 @@ const COLOR_FORMAT_BGRX_BGRA_FLIPPED = 200;
 const COLOR_FORMAT_FASTEST = 100;
 
 const BANDWIDTH_METADATA_ONLY = -10; // Receive metadata.
-const BANDWIDTH_AUDIO_ONLY    =  10; // Receive metadata, audio.
-const BANDWIDTH_LOWEST        =  0; // Receive metadata, audio, video at a lower bandwidth and resolution.
-const BANDWIDTH_HIGHEST       =  100; // Receive metadata, audio, video at full resolution.
+const BANDWIDTH_AUDIO_ONLY = 10; // Receive metadata, audio.
+const BANDWIDTH_LOWEST = 0; // Receive metadata, audio, video at a lower bandwidth and resolution.
+const BANDWIDTH_HIGHEST = 100; // Receive metadata, audio, video at full resolution.
 
 const FORMAT_TYPE_PROGRESSIVE = 1;
 const FORMAT_TYPE_INTERLACED = 0;
@@ -91,7 +91,7 @@ let find = function (...args) {
   return addon.find.apply(null, args);
 }
 
-function isSupportedPlatform () {
+function isSupportedPlatform() {
   return process.platform === 'darwin' || process.platform === 'linux' ||
     (process.platform === 'win32' && ['ia32', 'x64'].includes(process.arch))
 }

@@ -28,26 +28,29 @@
 #endif // _WIN32
 
 /*  own library API  */
-#include "grandiose_util.h"
-#include "grandiose_find.h"
-#include "grandiose_routing.h"
+#include "grandi_util.h"
+#include "grandi_find.h"
+#include "grandi_routing.h"
 
 /*  own module API  */
-napi_value routing_destroy    (napi_env, napi_callback_info);
-napi_value routing_change     (napi_env, napi_callback_info);
-napi_value routing_clear      (napi_env, napi_callback_info);
+napi_value routing_destroy(napi_env, napi_callback_info);
+napi_value routing_change(napi_env, napi_callback_info);
+napi_value routing_clear(napi_env, napi_callback_info);
 napi_value routing_connections(napi_env, napi_callback_info);
-napi_value routing_sourcename (napi_env, napi_callback_info);
+napi_value routing_sourcename(napi_env, napi_callback_info);
 
 /*  wrapper structure for embedded value  */
-typedef struct embeddedValue {
+typedef struct embeddedValue
+{
     void *value;
 } embeddedValue_t;
 
 /*  callback for destroying embedded value  */
-void finalizeRouting(napi_env env, void* data, void* hint) {
+void finalizeRouting(napi_env env, void *data, void *hint)
+{
     embeddedValue_t *embeddedValue = (embeddedValue_t *)data;
-    if (embeddedValue != nullptr) {
+    if (embeddedValue != nullptr)
+    {
         NDIlib_routing_instance_t routing = (NDIlib_routing_instance_t)(embeddedValue->value);
         if (routing != nullptr)
             NDIlib_routing_destroy(routing);
@@ -57,35 +60,39 @@ void finalizeRouting(napi_env env, void* data, void* hint) {
 }
 
 /*  callback for executing method routing()  */
-void routingExecute(napi_env env, void* data) {
+void routingExecute(napi_env env, void *data)
+{
     routingCarrier *c = (routingCarrier *)data;
     NDIlib_routing_create_t routingConfig;
     routingConfig.p_ndi_name = c->name;
-    routingConfig.p_groups   = c->groups;
+    routingConfig.p_groups = c->groups;
     c->routing = NDIlib_routing_create(&routingConfig);
-    if (!c->routing) {
-        c->status   = GRANDIOSE_ROUTING_CREATE_FAIL;
+    if (!c->routing)
+    {
+        c->status = GRANDI_ROUTING_CREATE_FAIL;
         c->errorMsg = "Failed to create NDI routing.";
         return;
     }
 }
 
 /*  callback for completing method routing()  */
-void routingComplete(napi_env env, napi_status asyncStatus, void* data) {
+void routingComplete(napi_env env, napi_status asyncStatus, void *data)
+{
     routingCarrier *c = (routingCarrier *)data;
-   
+
     /*  check status  */
-    if (asyncStatus != napi_ok) {
-        c->status   = asyncStatus;
+    if (asyncStatus != napi_ok)
+    {
+        c->status = asyncStatus;
         c->errorMsg = "Async routing creation failed to complete.";
     }
     REJECT_STATUS;
-   
+
     /*  create result object  */
     napi_value result;
     c->status = napi_create_object(env, &result);
     REJECT_STATUS;
-   
+
     /*  embed the native routing object  */
     napi_value embedded;
     embeddedValue_t *embeddedValue = (embeddedValue_t *)malloc(sizeof(embeddedValue_t));
@@ -97,22 +104,24 @@ void routingComplete(napi_env env, napi_status asyncStatus, void* data) {
 
     /*  create "name" property  */
     napi_value name;
-    if (c->name != nullptr) {
-      c->status = napi_create_string_utf8(env, c->name, NAPI_AUTO_LENGTH, &name);
-      REJECT_STATUS;
-      c->status = napi_set_named_property(env, result, "name", name);
-      REJECT_STATUS;
+    if (c->name != nullptr)
+    {
+        c->status = napi_create_string_utf8(env, c->name, NAPI_AUTO_LENGTH, &name);
+        REJECT_STATUS;
+        c->status = napi_set_named_property(env, result, "name", name);
+        REJECT_STATUS;
     }
-   
+
     /*  create "groups" property  */
     napi_value groups;
-    if (c->groups != nullptr) {
-      c->status = napi_create_string_utf8(env, c->groups, NAPI_AUTO_LENGTH, &groups);
-      REJECT_STATUS;
-      c->status = napi_set_named_property(env, result, "groups", groups);
-      REJECT_STATUS;
+    if (c->groups != nullptr)
+    {
+        c->status = napi_create_string_utf8(env, c->groups, NAPI_AUTO_LENGTH, &groups);
+        REJECT_STATUS;
+        c->status = napi_set_named_property(env, result, "groups", groups);
+        REJECT_STATUS;
     }
-   
+
     /*  attach the "destroy()" method  */
     napi_value fn;
     c->status = napi_create_function(env, "destroy", NAPI_AUTO_LENGTH, routing_destroy, nullptr, &fn);
@@ -125,68 +134,70 @@ void routingComplete(napi_env env, napi_status asyncStatus, void* data) {
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result, "change", fn);
     REJECT_STATUS;
-    
+
     /*  attach the "clear()" method  */
     c->status = napi_create_function(env, "clear", NAPI_AUTO_LENGTH, routing_clear, nullptr, &fn);
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result, "clear", fn);
     REJECT_STATUS;
-   
+
     /*  attach the "connections()" method  */
     c->status = napi_create_function(env, "connections", NAPI_AUTO_LENGTH, routing_connections, nullptr, &fn);
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result, "connections", fn);
     REJECT_STATUS;
-   
+
     /*  attach the "sourcename()" method  */
     c->status = napi_create_function(env, "sourcename", NAPI_AUTO_LENGTH, routing_sourcename, nullptr, &fn);
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result, "sourcename", fn);
     REJECT_STATUS;
-   
+
     /*  resolve the promise  */
     napi_status status;
     status = napi_resolve_deferred(env, c->_deferred, result);
     FLOATING_STATUS;
-   
+
     /*  cleanup  */
     tidyCarrier(env, c);
 }
 
 /*  the API method "routing()"  */
-napi_value routing(napi_env env, napi_callback_info info) {
+napi_value routing(napi_env env, napi_callback_info info)
+{
     routingCarrier *c = new routingCarrier;
     napi_valuetype type;
-   
+
     /*  create result promise  */
     napi_value promise;
     c->status = napi_create_promise(env, &c->_deferred, &promise);
     REJECT_RETURN;
-   
+
     /*  fetch argument  */
     size_t argc = 1;
     napi_value args[1];
     c->status = napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     REJECT_RETURN;
-    if (argc != (size_t) 1)
-        REJECT_ERROR_RETURN("Routing must be created with an object.", GRANDIOSE_INVALID_ARGS);
+    if (argc != (size_t)1)
+        REJECT_ERROR_RETURN("Routing must be created with an object.", GRANDI_INVALID_ARGS);
     c->status = napi_typeof(env, args[0], &type);
     REJECT_RETURN;
     bool isArray;
     c->status = napi_is_array(env, args[0], &isArray);
     REJECT_RETURN;
     if ((type != napi_object) || isArray)
-        REJECT_ERROR_RETURN("Single argument must be an object, not an array.", GRANDIOSE_INVALID_ARGS);
+        REJECT_ERROR_RETURN("Single argument must be an object, not an array.", GRANDI_INVALID_ARGS);
     napi_value config = args[0];
-   
+
     /*  fetch "name" property  */
     napi_value name;
     c->status = napi_get_named_property(env, config, "name", &name);
     REJECT_RETURN;
     c->status = napi_typeof(env, name, &type);
-    if (type != napi_undefined) {
+    if (type != napi_undefined)
+    {
         if (type != napi_string)
-            REJECT_ERROR_RETURN("Optional name property must be a string when present.", GRANDIOSE_INVALID_ARGS);
+            REJECT_ERROR_RETURN("Optional name property must be a string when present.", GRANDI_INVALID_ARGS);
         size_t namel;
         c->status = napi_get_value_string_utf8(env, name, nullptr, 0, &namel);
         REJECT_RETURN;
@@ -194,15 +205,16 @@ napi_value routing(napi_env env, napi_callback_info info) {
         c->status = napi_get_value_string_utf8(env, name, c->name, namel + 1, &namel);
         REJECT_RETURN;
     }
-   
+
     /*  fetch "groups" property  */
     napi_value groups;
     c->status = napi_get_named_property(env, config, "groups", &groups);
     REJECT_RETURN;
     c->status = napi_typeof(env, groups, &type);
-    if (type != napi_undefined) {
+    if (type != napi_undefined)
+    {
         if (type != napi_string)
-            REJECT_ERROR_RETURN("Optional groups property must be a string when present.", GRANDIOSE_INVALID_ARGS);
+            REJECT_ERROR_RETURN("Optional groups property must be a string when present.", GRANDI_INVALID_ARGS);
         size_t groupsl;
         c->status = napi_get_value_string_utf8(env, groups, nullptr, 0, &groupsl);
         REJECT_RETURN;
@@ -210,7 +222,7 @@ napi_value routing(napi_env env, napi_callback_info info) {
         c->status = napi_get_value_string_utf8(env, groups, c->groups, groupsl + 1, &groupsl);
         REJECT_RETURN;
     }
-   
+
     /*  create an internal async resource  */
     napi_value resource_name;
     c->status = napi_create_string_utf8(env, "Routing", NAPI_AUTO_LENGTH, &resource_name);
@@ -224,7 +236,8 @@ napi_value routing(napi_env env, napi_callback_info info) {
 }
 
 /*  API method "routing.destroy()"  */
-napi_value routing_destroy(napi_env env, napi_callback_info info) {
+napi_value routing_destroy(napi_env env, napi_callback_info info)
+{
     /*  create a new Promise carrier object  */
     carrier *c = new carrier;
     napi_value promise;
@@ -247,7 +260,8 @@ napi_value routing_destroy(napi_env env, napi_callback_info info) {
     napi_valuetype result;
     if (napi_typeof(env, embeddedValue, &result) != napi_ok)
         NAPI_THROW_ERROR("NDI routing already destroyed");
-    if (result == napi_external) {
+    if (result == napi_external)
+    {
         /*  fetch NDI routing native object  */
         embeddedValue_t *embeddedData;
         c->status = napi_get_value_external(env, embeddedValue, (void **)&embeddedData);
@@ -271,7 +285,8 @@ napi_value routing_destroy(napi_env env, napi_callback_info info) {
 }
 
 /*  API method "routing.change()"  */
-napi_value routing_change(napi_env env, napi_callback_info info) {
+napi_value routing_change(napi_env env, napi_callback_info info)
+{
     napi_status status;
 
     /*  fetch arguments  */
@@ -319,37 +334,38 @@ napi_value routing_change(napi_env env, napi_callback_info info) {
     CHECK_STATUS;
     if (type != napi_undefined && type != napi_string)
         NAPI_THROW_ERROR("Source 'urlAddress' sub-property must be of type string.")
-  
+
     /*  create NDI native source object  */
     NDIlib_source_t *ndi_source = new NDIlib_source_t();
     status = makeNativeSource(env, source, ndi_source);
     CHECK_STATUS;
-  
+
     /*  call NDI API functionality  */
     int ok = NDIlib_routing_change(routing, ndi_source);
-  
+
     /*  cleanup resource  */
     delete ndi_source;
-  
+
     /*  return a boolean result  */
     napi_value result;
     status = napi_get_boolean(env, ok, &result);
     CHECK_STATUS;
-  
+
     return result;
 }
 
 /*  API method "routing.clear()"  */
-napi_value routing_clear(napi_env env, napi_callback_info info) {
+napi_value routing_clear(napi_env env, napi_callback_info info)
+{
     napi_status status;
-    
+
     /*  fetch arguments  */
     size_t argc = 1;
     napi_value args[1];
     napi_value thisValue;
     status = napi_get_cb_info(env, info, &argc, args, &thisValue, nullptr);
     CHECK_STATUS;
-    
+
     /*  fetch embedded NDI native routing object  */
     napi_value embeddedValue;
     status = napi_get_named_property(env, thisValue, "embedded", &embeddedValue);
@@ -358,7 +374,7 @@ napi_value routing_clear(napi_env env, napi_callback_info info) {
     status = napi_get_value_external(env, embeddedValue, (void **)&embeddedData);
     CHECK_STATUS;
     NDIlib_routing_instance_t routing = (NDIlib_routing_instance_t)(embeddedData->value);
-    
+
     /*  call NDI API functionality  */
     int ok = NDIlib_routing_clear(routing);
 
@@ -366,21 +382,22 @@ napi_value routing_clear(napi_env env, napi_callback_info info) {
     napi_value result;
     status = napi_get_boolean(env, ok, &result);
     CHECK_STATUS;
-    
+
     return result;
 }
 
 /*  API method "routing.connections()"  */
-napi_value routing_connections(napi_env env, napi_callback_info info) {
+napi_value routing_connections(napi_env env, napi_callback_info info)
+{
     napi_status status;
-   
+
     /*  fetch arguments  */
     size_t argc = 1;
     napi_value args[1];
     napi_value thisValue;
     status = napi_get_cb_info(env, info, &argc, args, &thisValue, nullptr);
     CHECK_STATUS;
-   
+
     /*  fetch embedded NDI native routing object  */
     napi_value embeddedValue;
     status = napi_get_named_property(env, thisValue, "embedded", &embeddedValue);
@@ -389,7 +406,7 @@ napi_value routing_connections(napi_env env, napi_callback_info info) {
     status = napi_get_value_external(env, embeddedValue, (void **)&embeddedData);
     CHECK_STATUS;
     NDIlib_routing_instance_t routing = (NDIlib_routing_instance_t)(embeddedData->value);
-   
+
     /*  call NDI API functionality  */
     int conns = NDIlib_routing_get_no_connections(routing, 0);
 
@@ -397,21 +414,22 @@ napi_value routing_connections(napi_env env, napi_callback_info info) {
     napi_value result;
     status = napi_create_int32(env, (int32_t)conns, &result);
     CHECK_STATUS;
-   
+
     return result;
 }
 
 /*  API method "routing.sourcename()"  */
-napi_value routing_sourcename(napi_env env, napi_callback_info info) {
+napi_value routing_sourcename(napi_env env, napi_callback_info info)
+{
     napi_status status;
-   
+
     /*  fetch arguments  */
     size_t argc = 1;
     napi_value args[1];
     napi_value thisValue;
     status = napi_get_cb_info(env, info, &argc, args, &thisValue, nullptr);
     CHECK_STATUS;
-   
+
     /*  fetch embedded NDI native routing object  */
     napi_value embeddedValue;
     status = napi_get_named_property(env, thisValue, "embedded", &embeddedValue);
@@ -420,7 +438,7 @@ napi_value routing_sourcename(napi_env env, napi_callback_info info) {
     status = napi_get_value_external(env, embeddedValue, (void **)&embeddedData);
     CHECK_STATUS;
     NDIlib_routing_instance_t routing = (NDIlib_routing_instance_t)(embeddedData->value);
-   
+
     /*  call NDI API functionality  */
     const NDIlib_source_t *source = NDIlib_routing_get_source_name(routing);
 
@@ -428,7 +446,6 @@ napi_value routing_sourcename(napi_env env, napi_callback_info info) {
     napi_value result;
     status = napi_create_string_utf8(env, source->p_ndi_name, NAPI_AUTO_LENGTH, &result);
     CHECK_STATUS;
-   
+
     return result;
 }
-

@@ -14,19 +14,21 @@
 **  limitations under the License.
 */
 
-#ifndef GRANDIOSE_ROUTING_H
-#define GRANDIOSE_ROUTING_H
+#ifndef GRANDI_ROUTING_H
+#define GRANDI_ROUTING_H
 
 #include "node_api.h"
-#include "grandiose_util.h"
+#include "grandi_util.h"
 
 napi_value routing(napi_env, napi_callback_info);
 
-struct routingCarrier: carrier {
-    char* name = nullptr;
-    char* groups = nullptr;
+struct routingCarrier : carrier
+{
+    char *name = nullptr;
+    char *groups = nullptr;
     NDIlib_routing_instance_t routing;
-    ~routingCarrier() {
+    ~routingCarrier()
+    {
         if (name != nullptr)
             free(name);
         if (groups != nullptr)
@@ -34,5 +36,4 @@ struct routingCarrier: carrier {
     }
 };
 
-#endif /* GRANDIOSE_ROUTING_H */
-
+#endif /* GRANDI_ROUTING_H */

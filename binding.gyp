@@ -3,14 +3,14 @@
       "ndi_dir": "<(module_root_dir)/ndi"
     },
     "targets": [ {
-        "target_name": "grandiose",
+        "target_name": "grandi",
         "sources": [
-            "src/grandiose_util.cc",
-            "src/grandiose_find.cc",
-            "src/grandiose_send.cc",
-            "src/grandiose_receive.cc",
-            "src/grandiose_routing.cc",
-            "src/grandiose.cc"
+            "lib/grandi_util.cc",
+            "lib/grandi_find.cc",
+            "lib/grandi_send.cc",
+            "lib/grandi_receive.cc",
+            "lib/grandi_routing.cc",
+            "lib/grandi.cc"
         ],
         "include_dirs": [ "ndi/include" ],
         "conditions":[
