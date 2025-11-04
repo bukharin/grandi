@@ -196,6 +196,33 @@ import spawn from "cross-spawn";
 				"ndi/lib/lnx-arm64/",
 			);
 
+			/* ensure generic and SONAME symlinks exist for any micro version */
+			const linuxArchDirs = [
+				"ndi/lib/lnx-x86",
+				"ndi/lib/lnx-x64",
+				"ndi/lib/lnx-armv7l",
+				"ndi/lib/lnx-arm64",
+			];
+			for (const d of linuxArchDirs) {
+				try {
+					const files = await fs.promises.readdir(d);
+					const real = files.find((f) => /^libndi\.so\.\d+\.\d+/.test(f));
+					if (real) {
+						const realPath = path.join(d, real);
+						const so6 = path.join(d, "libndi.so.6");
+						const so = path.join(d, "libndi.so");
+                        for (const f of [so, so6]) {
+                            if (fs.existsSync(f)) {
+                                await fs.promises.unlink(f);
+                                await fs.promises.copyFile(realPath, f);
+                            }
+                        }
+					}
+				} catch (e) {
+					console.error(`** ERROR: ${e}`);
+				}
+			}
+
 			/*  remove temporary files  */
 			console.log("-- removing temporary files");
 			shell.rm("-f", file1);

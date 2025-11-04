@@ -921,6 +921,7 @@ void dataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   }
   REJECT_STATUS;
 
+  napi_status status;
   switch (c->frameType)
   {
   case NDIlib_frame_type_video:
@@ -937,6 +938,19 @@ void dataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
     c->status = GRANDI_CONNECTION_LOST;
     REJECT_STATUS;
     break;
+  case NDIlib_frame_type_source_change:
+    napi_value result_sc, param_sc;
+    c->status = napi_create_object(env, &result_sc);
+    REJECT_STATUS;
+    c->status = napi_create_string_utf8(env, "sourceChange", NAPI_AUTO_LENGTH, &param_sc);
+    REJECT_STATUS;
+    c->status = napi_set_named_property(env, result_sc, "type", param_sc);
+    REJECT_STATUS;
+    status = napi_resolve_deferred(env, c->_deferred, result_sc);
+    FLOATING_STATUS;
+
+    tidyCarrier(env, c);
+    break;
   case NDIlib_frame_type_status_change:
     napi_value result, param;
     c->status = napi_create_object(env, &result);
@@ -945,8 +959,6 @@ void dataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result, "type", param);
     REJECT_STATUS;
-
-    napi_status status;
     status = napi_resolve_deferred(env, c->_deferred, result);
     FLOATING_STATUS;
 
