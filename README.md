@@ -231,7 +231,7 @@ Sending is supported; examples and utilities are provided in this package. More 
 
 To find out the version of NDI(tm), use:
 
-    grandi.version(); // e.g. 'NDI SDK WIN64 00:29:47 Jun 26 2018 3.5.9.0'
+    grandi.version(); // e.g. 'NDI SDK LINUX 10:24:11 Aug 21 2025 6.2.1.0'
 
 To check if the installed CPU is supported for NDI(tm), use:
 
@@ -247,7 +247,7 @@ Contributions can be made via pull requests and will be considered by the author
 
  Apart from the exceptions in the following section, this software is released under the Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
 
- Attribution: This is a maintained fork of Streampunk Grandiose. Portions are derived from the original Grandiose project and community forks under the Apache 2.0 license. See the [NOTICE](./NOTICE.md) file for attribution details.
+ Attribution: This is a maintained fork of Streampunk Grandiose. Portions are derived from the original Grandiose project and community forks under the Apache 2.0 license. See the [NOTICE](./NOTICE) file for attribution details.
 
 ### License exceptions
 
