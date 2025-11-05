@@ -771,7 +771,7 @@ void metadataReceiveExecute(napi_env env, void *data)
     break;
 
   default:
-    c->status = GRANDI_NOT_AUDIO;
+    c->status = GRANDI_NOT_METADATA;
     c->errorMsg = "Non-metadata payload received on metadata capture.";
     break;
   }
