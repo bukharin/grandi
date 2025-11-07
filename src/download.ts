@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import zip from "cross-zip";
-import execa from "execa";
+import { execa } from "execa";
 import got from "got";
 import shell from "shelljs";
 import tmp from "tmp";
@@ -117,7 +117,10 @@ async function main() {
 				path.join(extractDir, "app/Bin/x64/Processing.NDI.Lib.x64.dll"),
 				"ndi/lib/win-x64/Processing.NDI.Lib.x64.dll",
 			);
-
+			shell.cp(
+				path.join(extractDir, "app/NDI SDK License Agreement.pdf"),
+				"ndi/lib/NDI SDK License Agreement.pdf",
+			);
 			console.log("-- removing temporary files");
 			shell.rm("-f", innoZip);
 			shell.rm("-f", ndiExe);
@@ -156,8 +159,12 @@ async function main() {
 				"ndi/lib/mac_universal/",
 			);
 			shell.mv(
-				path.join(workDir, "NDI SDK for Apple/lib/macOS/libndi_licenses.txt"),
+				path.join(workDir, "NDI SDK for Apple/lib/libndi_licenses.txt"),
 				"ndi/lib/",
+			);
+			shell.mv(
+				path.join(workDir, "NDI SDK for Apple/NDI SDK License Agreement.pdf"),
+				"ndi/lib/LICENSE.pdf",
 			);
 
 			console.log("-- removing temporary files");
@@ -215,6 +222,10 @@ async function main() {
 					"NDI SDK for Linux/lib/aarch64-rpi4-linux-gnueabi/*",
 				),
 				"ndi/lib/lnx-arm64/",
+			);
+			shell.mv(
+				path.join(workDir, "NDI SDK for Linux/NDI SDK License Agreement.txt"),
+				"ndi/lib/LICENSE",
 			);
 			shell.mv(
 				path.join(workDir, "NDI SDK for Linux/licenses/libndi_licenses.txt"),

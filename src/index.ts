@@ -1,5 +1,4 @@
-import path from "node:path";
-import bindings from "bindings";
+import nodeGypBuild from "node-gyp-build";
 
 import type * as T from "./types";
 import {
@@ -18,54 +17,81 @@ function isSupportedPlatform(): boolean {
 	);
 }
 
-const addon: T.GrandiAddon = isSupportedPlatform()
-	? bindings({
-			bindings: "grandi",
-			module_root: path.resolve(__dirname, ".."),
-		})
-	: {
-			version() {
-				return "";
-			},
-			isSupportedCPU() {
-				return false;
-			},
-			initialize() {},
-			destroy() {},
-			send() {
-				return null;
-			},
-			receive() {
-				return null;
-			},
-			routing() {
-				return null;
-			},
-			find() {
-				return null;
-			},
-		};
+const noopAddon: T.GrandiAddon = {
+	version() {
+		return "";
+	},
+	isSupportedCPU() {
+		return false;
+	},
+	initialize() {
+		return false;
+	},
+	destroy() {
+		return false;
+	},
+	send(_params) {
+		return Promise.reject(new Error("Unsupported platform or CPU"));
+	},
+	receive(_params) {
+		return Promise.reject(new Error("Unsupported platform or CPU"));
+	},
+	routing() {
+		return Promise.reject(new Error("Unsupported platform or CPU"));
+	},
+	find(_params) {
+		return Promise.reject(new Error("Unsupported platform or CPU"));
+	},
+};
 
-function find(params: T.FindOptions = {}): Promise<T.Finder> {
-	if (!params) return addon.find();
-	if (Array.isArray(params.groups)) {
-		params.groups = params.groups.reduce((x: string, y: string) => `${x},${y}`);
-	}
-	if (Array.isArray(params.extraIPs)) {
-		params.extraIPs = params.extraIPs.reduce(
-			(x: string, y: string) => `${x},${y}`,
-		);
-	}
+const addon: T.GrandiAddon = isSupportedPlatform()
+	? (nodeGypBuild(__dirname) as T.GrandiAddon)
+	: noopAddon;
+
+export function find(params: T.FindOptions = {}): Promise<T.Finder> {
 	return addon.find(params);
 }
-export default {
-	version: addon.version,
-	isSupportedCPU: addon.isSupportedCPU,
-	initialize: addon.initialize,
-	destroy: addon.destroy,
-	send: addon.send,
-	receive: addon.receive,
-	routing: addon.routing,
+// Named runtime exports
+export const version = addon.version;
+export const isSupportedCPU = addon.isSupportedCPU;
+export const initialize = addon.initialize;
+export const destroy = addon.destroy;
+export const send = addon.send;
+export const receive = addon.receive;
+export const routing = addon.routing;
+
+// Re-export enums and types for convenient named imports
+export { ColorFormat, AudioFormat, Bandwidth, FrameType, FourCC };
+export type {
+	AudioFrame,
+	AudioReceiveOptions,
+	Finder,
+	FindOptions,
+	GrandiAddon,
+	PtpTimestamp,
+	ReceivedAudioFrame,
+	ReceivedMetadataFrame,
+	ReceivedVideoFrame,
+	ReceiveOptions,
+	ReceiverDataFrame,
+	Routing,
+	Sender,
+	SenderTally,
+	Source,
+	SourceChangeEvent,
+	StatusChangeEvent,
+	Timecode,
+	VideoFrame,
+} from "./types";
+
+const grandi = {
+	version,
+	isSupportedCPU,
+	initialize,
+	destroy,
+	send,
+	receive,
+	routing,
 	find,
 	ColorFormat,
 	AudioFormat,
@@ -74,7 +100,6 @@ export default {
 	FourCC,
 
 	// Constants mapped to enum values
-
 	COLOR_FORMAT_BGRX_BGRA: ColorFormat.BGRX_BGRA,
 	COLOR_FORMAT_UYVY_BGRA: ColorFormat.UYVY_BGRA,
 	COLOR_FORMAT_RGBX_RGBA: ColorFormat.RGBX_RGBA,
@@ -110,3 +135,5 @@ export default {
 	FOURCC_RGBX: FourCC.RGBX,
 	FOURCC_FLTp: FourCC.FLTp,
 };
+
+export default grandi;

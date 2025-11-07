@@ -4,6 +4,7 @@ export enum FrameType {
 	Field0 = 2,
 	Field1 = 3,
 }
+
 export enum ColorFormat {
 	BGRX_BGRA = 0,
 	UYVY_BGRA = 1,
@@ -13,17 +14,20 @@ export enum ColorFormat {
 	Best = 101,
 	BGRX_BGRA_FLIPPED = 200,
 }
+
 export enum AudioFormat {
 	Float32Separate = 0,
 	Float32Interleaved = 1,
 	Int16Interleaved = 2,
 }
+
 export enum Bandwidth {
 	MetadataOnly = -10,
 	AudioOnly = 10,
 	Lowest = 0,
 	Highest = 100,
 }
+
 export enum FourCC {
 	UYVY = 1498831189,
 	UYVA = 1096178005,
@@ -38,6 +42,7 @@ export enum FourCC {
 	RGBX = 1480738642,
 	FLTp = 1884572742,
 }
+
 export type PtpTimestamp = [number, number]; // [seconds, nanoseconds]
 export type Timecode = bigint | number | PtpTimestamp;
 
@@ -46,10 +51,8 @@ export interface Source {
 	urlAddress?: string;
 }
 
-type NodeBuffer = Buffer | Uint8Array | ArrayBuffer;
-
 export interface VideoFrame {
-	type: "video";
+	type?: "video";
 	xres: number;
 	yres: number;
 	frameRateN: number;
@@ -58,57 +61,117 @@ export interface VideoFrame {
 	fourCC: FourCC;
 	frameFormatType: FrameType;
 	lineStrideBytes: number;
-	data: NodeBuffer;
+	data: Buffer;
 	timecode?: Timecode;
 	timestamp?: PtpTimestamp;
 }
 
+export interface ReceivedVideoFrame extends VideoFrame {
+	type: "video";
+	timecode: PtpTimestamp;
+	timestamp: PtpTimestamp;
+	metadata?: string;
+}
+
 export interface AudioFrame {
+	type?: "audio";
+	sampleRate: number;
+	noChannels: number;
+	noSamples: number;
+	channelStrideBytes: number;
+	data: Buffer;
+	fourCC: FourCC;
+	timecode?: Timecode;
+	timestamp?: PtpTimestamp;
+}
+
+export interface ReceivedAudioFrame {
 	type: "audio";
 	audioFormat: AudioFormat;
-	referenceLevel: number;
+	referenceLevel?: number;
 	sampleRate: number;
 	channels: number;
 	samples: number;
 	channelStrideInBytes: number;
-	data: NodeBuffer;
-	timecode?: Timecode;
-	timestamp?: PtpTimestamp;
+	data: Buffer;
+	timecode: PtpTimestamp;
+	timestamp: PtpTimestamp;
+	metadata?: string;
+}
+
+export interface ReceivedMetadataFrame {
+	type: "metadata";
+	length: number;
+	timecode: PtpTimestamp;
+	data: string;
+}
+
+export interface SourceChangeEvent {
+	type: "sourceChange";
+}
+
+export interface StatusChangeEvent {
+	type: "statusChange";
+}
+
+export type ReceiverDataFrame =
+	| ReceivedVideoFrame
+	| ReceivedAudioFrame
+	| ReceivedMetadataFrame
+	| SourceChangeEvent
+	| StatusChangeEvent;
+
+export interface AudioReceiveOptions {
+	audioFormat?: AudioFormat;
+	referenceLevel?: number;
 }
 
 export interface Receiver {
 	embedded: unknown;
-	video(timeoutMs?: number): Promise<VideoFrame>;
+	video(timeoutMs?: number): Promise<ReceivedVideoFrame>;
+	audio(timeoutMs?: number): Promise<ReceivedAudioFrame>;
 	audio(
-		params: { audioFormat: AudioFormat; referenceLevel: number },
+		options: AudioReceiveOptions,
 		timeoutMs?: number,
-	): Promise<AudioFrame>;
-	metadata: unknown;
-	data: unknown;
+	): Promise<ReceivedAudioFrame>;
+	metadata(timeoutMs?: number): Promise<ReceivedMetadataFrame>;
+	data(timeoutMs?: number): Promise<ReceiverDataFrame>;
+	data(
+		options: AudioReceiveOptions,
+		timeoutMs?: number,
+	): Promise<ReceiverDataFrame>;
 	source: Source;
 	colorFormat: ColorFormat;
 	bandwidth: Bandwidth;
 	allowVideoFields: boolean;
+	name?: string;
+}
+
+export interface SenderTally {
+	changed: boolean;
+	on_program: boolean;
+	on_preview: boolean;
 }
 
 export interface Sender {
 	embedded: unknown;
 	name: string;
-	groups?: string | string[];
 	clockVideo: boolean;
 	clockAudio: boolean;
 	video(frame: VideoFrame): Promise<void>;
 	audio(frame: AudioFrame): Promise<void>;
 	connections(): number;
+	tally(): SenderTally;
+	sourcename(): string;
 	destroy(): Promise<void>;
 }
 
 export interface Routing {
-	name: string;
-	groups?: string | string[];
 	embedded: unknown;
+	name?: string;
+	groups?: string;
 	destroy(): Promise<void>;
-	change(source: Source): number;
+	change(source: Source): boolean;
 	clear(): boolean;
 	connections(): number;
 	sourcename(): string;
@@ -116,14 +179,14 @@ export interface Routing {
 
 export interface Finder {
 	sources(): Source[];
-	wait(ms: number): Promise<void>;
+	wait(timeoutMs?: number): boolean;
 	destroy(): Promise<void>;
 }
 
 export interface FindOptions {
 	showLocalSources?: boolean;
-	groups?: string | string[];
-	extraIPs?: string | string[];
+	groups?: string;
+	extraIPs?: string;
 }
 
 export interface ReceiveOptions {
@@ -136,7 +199,7 @@ export interface ReceiveOptions {
 
 export interface SendOptions {
 	name: string;
-	groups?: string | string[];
+	groups?: string;
 	clockVideo?: boolean;
 	clockAudio?: boolean;
 }
@@ -144,10 +207,10 @@ export interface SendOptions {
 export interface GrandiAddon {
 	version(): string;
 	isSupportedCPU(): boolean;
-	initialize(): void;
-	destroy(): void;
-	find(params?: FindOptions): Promise<Finder>;
-	receive(params: ReceiveOptions): Receiver;
-	send(params: SendOptions): Sender;
-	routing(params: { name: string; groups?: string | string[] }): Routing;
+	initialize(): boolean;
+	destroy(): boolean;
+	find(params: FindOptions): Promise<Finder>;
+	receive(params: ReceiveOptions): Promise<Receiver>;
+	send(params: SendOptions): Promise<Sender>;
+	routing(params: { name?: string; groups?: string }): Promise<Routing>;
 }
