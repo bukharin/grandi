@@ -18,9 +18,9 @@
 		"lib",
 		"LICENSE",
 		"NOTICE",
-		"README.md"
+		"README.md",
+		"prebuilds"
 	],
-	"type": "module",
 	"main": "./dist/index.mjs",
 	"types": "./dist/index.d.mts",
 	"exports": {
@@ -36,7 +36,6 @@
 		"url": "https://github.com/tux-tn/grandi/issues"
 	},
 	"dependencies": {
-		"bindings": "1.5.0",
 		"cross-spawn": "7.0.6",
 		"cross-zip": "4.0.1",
 		"execa": "9.6.0",
@@ -52,21 +51,23 @@
 		"@types/node": "^24.10.0",
 		"@types/shelljs": "^0.8.17",
 		"@types/tmp": "^0.2.6",
+		"prebuildify": "^5.0.1",
 		"shx": "0.4.0",
 		"tsdown": "^0.16.0",
 		"typescript": "^5.9.3"
 	},
 	"scripts": {
-		"install": "node dist/install.mjs",
-		"build:ts": "tsdown",
-		"prepare": "npm run build:ts || true",
-		"build": "node-gyp rebuild",
-		"build:linux-arm": "CXX=arm-linux-gnueabihf-g++ node-gyp rebuild --arch\"arm\" --target_arch=\"arm\"",
-		"build:linux-arm64": "CXX=aarch64-linux-gnu-g++ node-gyp rebuild --arch\"arm64\" --target_arch=\"arm64\"",
-		"build:linux-x64": "CXX=x86_64-linux-gnu-g++ node-gyp rebuild --arch\"x64\" --target_arch=\"x64\"",
+		"preinstall": "node dist/download.mjs",
+		"install": "node-gyp-build",
+		"prebuild:download": "node dist/download.mjs",
+		"build": "tsdown",
+		"prebuild": "prebuildify --napi --strip",
 		"test": "node scratch/scratchVersion.js",
 		"format": "biome format",
 		"lint": "biome lint",
 		"clean": "shx rm -rf ndi build"
+	},
+	"engines": {
+		"node": ">=20.9.0"
 	}
 }
