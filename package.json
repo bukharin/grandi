@@ -51,10 +51,13 @@
 		"@types/node": "^24.10.0",
 		"@types/shelljs": "^0.8.17",
 		"@types/tmp": "^0.2.6",
+		"@vitest/coverage-v8": "^4.0.8",
+		"cross-env": "^10.1.0",
 		"prebuildify": "^6.0.1",
 		"shx": "0.4.0",
 		"tsdown": "^0.16.1",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.8"
 	},
 	"scripts": {
 		"preinstall": "node scripts/preinstall.mjs",
@@ -62,7 +65,11 @@
 		"prebuild:download": "node scripts/prebuild.mjs --force",
 		"build": "tsdown",
 		"prebuild": "prebuildify --napi --strip --target=node@20.0.0",
-		"test": "node scratch/scratchVersion.js",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:unit": "vitest run test/unit",
+		"test:integration": "cross-env RUN_NDI_TESTS=1 vitest run test/integration",
+		"test:coverage": "vitest run --coverage",
 		"format": "biome format",
 		"lint": "biome lint",
 		"clean": "shx rm -rf ndi build"
