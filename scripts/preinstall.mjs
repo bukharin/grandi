@@ -5,7 +5,7 @@ import readline from "node:readline";
 import { pipeline } from "node:stream/promises";
 import zip from "cross-zip";
 import { execa } from "execa";
-import got, { type Progress } from "got";
+import got from "got";
 import shell from "shelljs";
 import tmp from "tmp";
 
@@ -17,7 +17,7 @@ const arch = os.arch();
 const supportsColor = process.stdout.isTTY && process.env.NO_COLOR !== "1";
 const isInteractiveTerminal = process.stdout.isTTY && process.env.CI !== "true";
 
-const color = (open: string) => (value: string) =>
+const color = (open) => (value) =>
 	supportsColor ? `${open}${value}\x1b[0m` : value;
 
 const colors = {
@@ -40,23 +40,15 @@ const icons = {
 };
 
 const log = {
-	heading: (message: string) =>
-		console.log(`${icons.heading} ${colors.bold(message)}`),
-	info: (message: string) => console.log(`${icons.info} ${message}`),
-	step: (message: string) => console.log(`${icons.step} ${message}`),
-	success: (message: string) => console.log(`${icons.success} ${message}`),
-	warn: (message: string) => console.warn(`${icons.warn} ${message}`),
-	error: (message: string) => console.error(`${icons.error} ${message}`),
+	heading: (message) => console.log(`${icons.heading} ${colors.bold(message)}`),
+	info: (message) => console.log(`${icons.info} ${message}`),
+	step: (message) => console.log(`${icons.step} ${message}`),
+	success: (message) => console.log(`${icons.success} ${message}`),
+	warn: (message) => console.warn(`${icons.warn} ${message}`),
+	error: (message) => console.error(`${icons.error} ${message}`),
 };
 
-type DownloadOptions =
-	| string
-	| {
-			outFile?: string;
-			label?: string;
-	  };
-
-function formatBytes(bytes: number): string {
+function formatBytes(bytes) {
 	if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
 	const units = ["B", "KB", "MB", "GB", "TB"];
 	let value = bytes;
@@ -69,7 +61,7 @@ function formatBytes(bytes: number): string {
 	return `${value.toFixed(precision)} ${units[unitIndex]}`;
 }
 
-function deriveLabelFromUrl(url: string): string {
+function deriveLabelFromUrl(url) {
 	try {
 		const parsed = new URL(url);
 		const base = path.basename(parsed.pathname);
@@ -79,17 +71,17 @@ function deriveLabelFromUrl(url: string): string {
 	}
 }
 
-function clearProgressLine(): void {
+function clearProgressLine() {
 	if (!isInteractiveTerminal) return;
 	readline.cursorTo(process.stdout, 0);
 	readline.clearLine(process.stdout, 0);
 }
 
-function createDownloadTracker(label: string) {
+function createDownloadTracker(label) {
 	let progressRendered = false;
 	const prefix = `${colors.cyan("[dl]")} ${label}`;
 
-	const render = (details: string) => {
+	const render = (details) => {
 		if (!isInteractiveTerminal) return;
 		readline.cursorTo(process.stdout, 0);
 		readline.clearLine(process.stdout, 0);
@@ -101,7 +93,7 @@ function createDownloadTracker(label: string) {
 		start() {
 			log.step(`Downloading ${label}`);
 		},
-		update(progress: Progress) {
+		update(progress) {
 			if (!isInteractiveTerminal) return;
 			const percent =
 				typeof progress.percent === "number" &&
@@ -126,7 +118,7 @@ function createDownloadTracker(label: string) {
 			}
 			log.success(`Downloaded ${label}`);
 		},
-		fail(err: unknown) {
+		fail(err) {
 			if (progressRendered) {
 				clearProgressLine();
 			}
@@ -141,12 +133,9 @@ function createDownloadTracker(label: string) {
 	};
 }
 
-async function downloadToFile(
-	url: string,
-	options: DownloadOptions = {},
-): Promise<string> {
-	let outFile: string | undefined;
-	let label: string | undefined;
+async function downloadToFile(url, options = {}) {
+	let outFile;
+	let label;
 
 	if (typeof options === "string") {
 		outFile = options;
@@ -168,10 +157,7 @@ async function downloadToFile(
 	});
 
 	try {
-		await pipeline(
-			downloadStream as unknown as NodeJS.ReadableStream,
-			fs.createWriteStream(filePath),
-		);
+		await pipeline(downloadStream, fs.createWriteStream(filePath));
 		tracker.finish();
 		return filePath;
 	} catch (error) {
@@ -180,7 +166,7 @@ async function downloadToFile(
 	}
 }
 
-function ndiSubsetPresent(): boolean {
+function ndiSubsetPresent() {
 	try {
 		// Basic sanity: headers exist and at least one lib directory has files
 		const header = path.join("ndi", "include", "Processing.NDI.Lib.h");
@@ -202,6 +188,18 @@ function ndiSubsetPresent(): boolean {
 	}
 }
 
+function prebuildsPresent() {
+	try {
+		const prebuildDir = path.join("prebuilds");
+		if (!fs.existsSync(prebuildDir)) return false;
+		const currentArchDir = path.join(prebuildDir, `${platform}-${arch}`);
+		return (
+			fs.existsSync(currentArchDir) && fs.readdirSync(currentArchDir).length > 0
+		);
+	} catch {
+		return false;
+	}
+}
 async function main() {
 	log.heading("NDI SDK bootstrap");
 	log.info(`Detected platform: ${platform}/${arch}`);
@@ -217,7 +215,7 @@ async function main() {
 	}
 
 	const forceRebuild = process.env.NDI_FORCE?.toString() === "1";
-	if (!forceRebuild && ndiSubsetPresent()) {
+	if (!forceRebuild && ndiSubsetPresent() && prebuildsPresent()) {
 		log.success(
 			"NDI SDK subset already present; skipping re-assembly (set NDI_FORCE=1 to force)",
 		);

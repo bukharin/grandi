@@ -85,8 +85,10 @@
               }
             ],
             "link_settings": {
+              "ldflags": [
+                "-Wl,-rpath,'$$ORIGIN'"
+              ],
               "libraries": [
-                "-Wl,-rpath,$ORIGIN",
                 "-lndi"
               ],
               "library_dirs": [
@@ -109,8 +111,10 @@
               }
             ],
             "link_settings": {
+              "ldflags": [
+                "-Wl,-rpath,'$$ORIGIN'"
+              ],
               "libraries": [
-                "-Wl,-rpath,$ORIGIN",
                 "-lndi"
               ],
               "library_dirs": [
@@ -133,8 +137,10 @@
               }
             ],
             "link_settings": {
+              "ldflags": [
+                "-Wl,-rpath,'$$ORIGIN'"
+              ],
               "libraries": [
-                "-Wl,-rpath,$ORIGIN",
                 "-lndi"
               ],
               "library_dirs": [
@@ -157,8 +163,10 @@
               }
             ],
             "link_settings": {
+              "ldflags": [
+                "-Wl,-rpath,'$$ORIGIN'"
+              ],
               "libraries": [
-                "-Wl,-rpath,$ORIGIN",
                 "-lndi"
               ],
               "library_dirs": [

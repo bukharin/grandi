@@ -57,17 +57,17 @@
 		"typescript": "^5.9.3"
 	},
 	"scripts": {
-		"preinstall": "node dist/download.mjs",
+		"preinstall": "node scripts/preinstall.mjs",
 		"install": "node-gyp-build",
-		"prebuild:download": "node dist/download.mjs",
+		"prebuild:download": "node scripts/prebuild.mjs --force",
 		"build": "tsdown",
-		"prebuild": "prebuildify --napi --strip",
+		"prebuild": "prebuildify --napi --strip --target=node@20.0.0",
 		"test": "node scratch/scratchVersion.js",
 		"format": "biome format",
 		"lint": "biome lint",
 		"clean": "shx rm -rf ndi build"
 	},
 	"engines": {
-		"node": ">=20.9.0"
+		"node": ">=20.19.5"
 	}
 }

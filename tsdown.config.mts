@@ -7,9 +7,4 @@ export default defineConfig([
 		shims: true,
 		sourcemap: true,
 	},
-	{
-		entry: ["src/download.ts"],
-		outDir: "dist",
-		dts: false,
-	},
 ]);

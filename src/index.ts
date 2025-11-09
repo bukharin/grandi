@@ -1,3 +1,4 @@
+import path from "node:path";
 import nodeGypBuild from "node-gyp-build";
 
 import type * as T from "./types";
@@ -45,7 +46,7 @@ const noopAddon: T.GrandiAddon = {
 };
 
 const addon: T.GrandiAddon = isSupportedPlatform()
-	? (nodeGypBuild(__dirname) as T.GrandiAddon)
+	? (nodeGypBuild(path.join(__dirname, "..")) as T.GrandiAddon)
 	: noopAddon;
 
 export function find(params: T.FindOptions = {}): Promise<T.Finder> {
