@@ -18,14 +18,6 @@
       "include_dirs": [
         "<(ndi_include_dir)"
       ],
-      "copies": [
-        {
-          "destination": "<(product_dir)",
-          "files": [
-            "<(ndi_dir)/lib/libndi_licenses.txt"
-          ]
-        }
-      ],
       "conditions": [
         [
           "OS == 'win' and target_arch == 'ia32'",
@@ -79,7 +71,8 @@
                 "destination": "<(product_dir)",
                 "files": [
                   "<(ndi_dir)/lib/lnx-x86/libndi.so.6",
-                  "<(ndi_dir)/lib/LICENSE"
+                  "<(ndi_dir)/lib/LICENSE",
+                  "<(ndi_dir)/lib/libndi_licenses.txt"
                 ]
               }
             ],
@@ -104,7 +97,8 @@
                 "destination": "<(product_dir)",
                 "files": [
                   "<(ndi_dir)/lib/lnx-x64/libndi.so.6",
-                  "<(ndi_dir)/lib/LICENSE"
+                  "<(ndi_dir)/lib/LICENSE",
+                  "<(ndi_dir)/lib/libndi_licenses.txt"
                 ]
               }
             ],
@@ -129,7 +123,8 @@
                 "destination": "<(product_dir)",
                 "files": [
                   "<(ndi_dir)/lib/lnx-armv7l/libndi.so.6",
-                  "<(ndi_dir)/lib/LICENSE"
+                  "<(ndi_dir)/lib/LICENSE",
+                  "<(ndi_dir)/lib/libndi_licenses.txt"
                 ]
               }
             ],
@@ -154,7 +149,8 @@
                 "destination": "<(product_dir)",
                 "files": [
                   "<(ndi_dir)/lib/lnx-arm64/libndi.so.6",
-                  "<(ndi_dir)/lib/LICENSE"
+                  "<(ndi_dir)/lib/LICENSE",
+                  "<(ndi_dir)/lib/libndi_licenses.txt"
                 ]
               }
             ],
@@ -178,8 +174,9 @@
               {
                 "destination": "<(product_dir)",
                 "files": [
-                  "<(ndi_dir)/lib/mac_universal/libndi.dylib",
-                  "<(ndi_dir)/lib/NDI SDK License Agreement.pdf"
+                  "<(ndi_dir)/lib/macOS/libndi.dylib",
+                  "<(ndi_dir)/lib/NDI SDK License Agreement.pdf",
+                  "<(ndi_dir)/lib/macOS/libndi_licenses.txt"
                 ]
               }
             ],
@@ -189,7 +186,7 @@
                 "-lndi"
               ],
               "library_dirs": [
-                "<(ndi_dir)/lib/mac_universal"
+                "<(ndi_dir)/lib/macOS"
               ]
             }
           }
