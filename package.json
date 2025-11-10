@@ -71,6 +71,7 @@
 		"test:integration": "cross-env RUN_NDI_TESTS=1 vitest run test/integration",
 		"test:coverage": "vitest run --coverage",
 		"format": "biome format",
+		"format:cpp": "clang-format -i lib/*.cc lib/*.h",
 		"lint": "biome lint",
 		"clean": "shx rm -rf ndi build"
 	},
