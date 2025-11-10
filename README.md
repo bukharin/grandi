@@ -10,7 +10,11 @@ Grandi is a maintained fork of [Streampunk Grandiose](https://github.com/Streamp
 - Audio frame sending support from the [rse/grandiose](https://github.com/rse/grandiose) fork.
 - Ad-hoc download of NDI SDK assets.
 - Portability fixes for Windows, macOS, and Linux drawn from multiple forks.
-- NDI sender and routing functionality plus initial type definitions from community forks.
+- Sender, routing, and type-definition improvements from [ianshade/grandiose](https://github.com/ianshade/grandiose) and [hopejr/grandiose](https://github.com/hopejr/grandiose).
+
+## Why “Grandi”?
+
+NDI™ was conceived as a grand vision for IP media transport. The earliest bindings leaned into that idea with the tongue‑in‑cheek name “gra‑NDI‑ose”. **Grandi** preserves the homage: it nods to “[grandiose](https://github.com/Streampunk/grandiose)”, itself drawn from the French word *grandi* (“grown”).
 
 ## Capabilities
 - Native NDI™  6 bindings written in modern TypeScript with out-of-the-box type definitions.
@@ -32,7 +36,7 @@ Grandi currently ships prebuilt binaries for the same platforms supported by the
 | --- | --- | --- | --- |
 | Windows | x86, x64 | ✅ Prebuilt | Visual Studio 2013 C runtime only needed when building locally; prebuilt binaries include the required DLLs. |
 | macOS | Universal (x64 + arm64) | ✅ Prebuilt | Ships with the official universal NDI™ driver, so Intel and Apple Silicon hosts run natively. |
-| Linux | x86, x64, armv7l, arm64 | ✅ Prebuilt | Built against the glibc-based NDI™ SDK artifacts provided for Intel and ARM targets. |
+| Linux | x86, x64, armv7l, arm64 | ✅ Prebuilt | Built against the glibc-based NDI™ SDK; requires `libavahi-common.so.3`, `libavahi-client.so.3`, and the `avahi-daemon` service. |
 
 ## Installation
 Install [Node.js](http://nodejs.org/) for your platform (tested against the current Long Term Support release). Then add the dependency to your project:
@@ -134,62 +138,7 @@ const receiver = await grandi.receive({
   allowVideoFields: true,
   name: "rooftop"
 });
-```ts
-try {
-	for (let i = 0; i < 10; i += 1) {
-		const frame = await receiver.video(5_000);
-		console.log(frame);
-	}
-} catch (error) {
-	console.error("Video receive failed", error);
-}
-```
 
-Example frame:
-
-```json
-{
-  "type": "video",
-  "xres": 1920,
-  "yres": 1080,
-  "frameRateN": 30000,
-  "frameRateD": 1001,
-  "pictureAspectRatio": 1.7778,
-  "timestamp": [1538569443, 717845600],
-  "frameFormatType": 1,
-  "timecode": [0, 0],
-  "lineStrideBytes": 3840,
-  "data": "<Buffer …>"
-}
-```
-
-**Audio** — choose formats with `audioFormat` and `referenceLevel`:
-
-```ts
-const audioFrame = await receiver.audio(
-	{
-		audioFormat: grandi.AudioFormat.Int16Interleaved,
-		referenceLevel: 0, // dB above +4dBu
-	},
-	8_000,
-);
-```
-
-Example frame:
-
-```json
-{
-  "type": "audio",
-  "audioFormat": 2,
-  "referenceLevel": 0,
-  "sampleRate": 48000,
-  "channels": 4,
-  "samples": 4800,
-  "channelStrideInBytes": 9600,
-  "timestamp": [1538578787, 132614500],
-  "timecode": [0, 800000000],
-  "data": "<Buffer …>"
-}
 ```
 
 #### Video
