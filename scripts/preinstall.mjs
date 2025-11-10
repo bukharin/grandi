@@ -251,8 +251,8 @@ async function main() {
 
 			log.step("Assembling Windows NDI SDK subset");
 			shell.rm("-rf", "ndi");
-			shell.mkdir("-p", ["ndi/include", "ndi/lib/win-x86", "ndi/lib/win-x64"]);
-			shell.cp("-R", path.join(extractDir, "app/Include"), "ndi/include/");
+			shell.mkdir("-p", ["ndi/lib/win-x86", "ndi/lib/win-x64"]);
+			shell.cp("-rL", path.join(extractDir, "app", "Include/"), "ndi/");
 			shell.cp(
 				path.join(extractDir, "app/Lib/x86/Processing.NDI.Lib.x86.lib"),
 				"ndi/lib/win-x86/Processing.NDI.Lib.x86.lib",

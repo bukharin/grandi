@@ -8,7 +8,7 @@ on:
 
 permissions:
   contents: read
-
+  id-token: write
 
 jobs:
   prebuild:
@@ -46,13 +46,20 @@ jobs:
             docker run -u $(id -u):$(id -g) -v $(pwd):/input -w /input ghcr.io/prebuild/linux-armv7 npm run prebuild
             docker run -u $(id -u):$(id -g) -v $(pwd):/input -w /input ghcr.io/prebuild/linux-arm64 npm run prebuild
 
+      - if: matrix.os == 'ubuntu-latest'
+        name: Prebuild binaries for x86 Linux
+        run: |
+            sudo apt-get update
+            sudo apt-get install -y libc6-dev-i386 g++-13-multilib
+            npm run prebuild -- --arch=ia32
+
       - if: matrix.os == 'macos-latest'
         name: Prebuild binaries for x64 macOS
         run: |
             npm run prebuild -- --arch=x64
 
       - if: matrix.os == 'windows-latest'
-        name: Prebuild binaries for 32-bit Windows
+        name: Prebuild binaries for x86 Windows
         run: |
             npm run prebuild -- --arch=ia32
       - name: Upload prebuild artifacts
@@ -80,33 +87,25 @@ jobs:
         run: npm install
 
       - name: Download Linux prebuilds
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: prebuilds-ubuntu-latest
-          path: artifacts/prebuilds-ubuntu
+          path: prebuilds
 
       - name: Download macOS prebuilds
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: prebuilds-macos-latest
-          path: artifacts/prebuilds-macos
+          path: prebuilds
 
       - name: Download Windows prebuilds
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: prebuilds-windows-latest
-          path: artifacts/prebuilds-windows
+          path: prebuilds
 
-      - name: Merge prebuild artifacts
-        run: |
-          mkdir -p prebuilds
-          for dir in artifacts/prebuilds-*; do
-            if [ -d "$dir/prebuilds" ]; then
-              cp -R "$dir/prebuilds/." prebuilds/
-            fi
-          done
-
-      - name: Publish package
-        run: npm publish --dry-run
+      - if: github.event_name != 'workflow_dispatch'
+        name: Publish package
+        run: npm publish --provenance --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+            NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
