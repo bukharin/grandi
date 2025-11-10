@@ -78,7 +78,6 @@
               {
                 "destination": "<(product_dir)",
                 "files": [
-                  "<(ndi_dir)/lib/lnx-x86/libndi.so",
                   "<(ndi_dir)/lib/lnx-x86/libndi.so.6",
                   "<(ndi_dir)/lib/LICENSE"
                 ]
@@ -104,7 +103,6 @@
               {
                 "destination": "<(product_dir)",
                 "files": [
-                  "<(ndi_dir)/lib/lnx-x64/libndi.so",
                   "<(ndi_dir)/lib/lnx-x64/libndi.so.6",
                   "<(ndi_dir)/lib/LICENSE"
                 ]
@@ -130,7 +128,6 @@
               {
                 "destination": "<(product_dir)",
                 "files": [
-                  "<(ndi_dir)/lib/lnx-armv7l/libndi.so",
                   "<(ndi_dir)/lib/lnx-armv7l/libndi.so.6",
                   "<(ndi_dir)/lib/LICENSE"
                 ]
@@ -156,7 +153,6 @@
               {
                 "destination": "<(product_dir)",
                 "files": [
-                  "<(ndi_dir)/lib/lnx-arm64/libndi.so",
                   "<(ndi_dir)/lib/lnx-arm64/libndi.so.6",
                   "<(ndi_dir)/lib/LICENSE"
                 ]
