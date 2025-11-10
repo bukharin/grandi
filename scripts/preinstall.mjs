@@ -200,18 +200,6 @@ function ndiSubsetPresent() {
 	}
 }
 
-function prebuildsPresent() {
-	try {
-		const prebuildDir = path.join("prebuilds");
-		if (!fs.existsSync(prebuildDir)) return false;
-		const currentArchDir = path.join(prebuildDir, `${platform}-${arch}`);
-		return (
-			fs.existsSync(currentArchDir) && fs.readdirSync(currentArchDir).length > 0
-		);
-	} catch {
-		return false;
-	}
-}
 async function main() {
 	log.heading("NDI SDK bootstrap");
 	log.info(`Detected platform: ${platform}/${arch}`);
@@ -225,8 +213,7 @@ async function main() {
 		log.warn("Current platform is not supported; skipping NDI SDK setup.");
 		return;
 	}
-
-	if (!forceRebuild && ndiSubsetPresent() && prebuildsPresent()) {
+	if (!forceRebuild && ndiSubsetPresent()) {
 		log.success(
 			"NDI SDK subset already present; skipping re-assembly (set NDI_FORCE=1 to force)",
 		);
@@ -412,11 +399,9 @@ async function main() {
 						const realPath = path.join(d, real);
 						const so6 = path.join(d, "libndi.so.6");
 						const so = path.join(d, "libndi.so");
-						for (const f of [so, so6]) {
-							if (fs.existsSync(f)) {
-								await fs.promises.unlink(f);
-								await fs.promises.copyFile(realPath, f);
-							}
+						if (fs.existsSync(so6)) {
+							await fs.promises.unlink(so6);
+							await fs.promises.copyFile(realPath, so6);
 						}
 					}
 				} catch (e) {
