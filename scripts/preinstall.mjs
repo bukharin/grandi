@@ -252,7 +252,7 @@ async function main() {
 			log.step("Assembling Windows NDI SDK subset");
 			shell.rm("-rf", "ndi");
 			shell.mkdir("-p", ["ndi/include", "ndi/lib/win-x86", "ndi/lib/win-x64"]);
-			shell.cp(path.join(extractDir, "app/Include/*.h"), "ndi/include/");
+			shell.cp("-R", path.join(extractDir, "app/Include"), "ndi/include/");
 			shell.cp(
 				path.join(extractDir, "app/Lib/x86/Processing.NDI.Lib.x86.lib"),
 				"ndi/lib/win-x86/Processing.NDI.Lib.x86.lib",
@@ -271,7 +271,11 @@ async function main() {
 			);
 			shell.cp(
 				path.join(extractDir, "app/NDI SDK License Agreement.pdf"),
-				"ndi/lib/NDI SDK License Agreement.pdf",
+				"ndi/lib/LICENSE.pdf",
+			);
+			shell.cp(
+				path.join(extractDir, "app/Bin/x64/Processing.NDI.Lib.Licenses.txt"),
+				"ndi/lib/libndi_licenses.txt",
 			);
 			log.step("Removing temporary files");
 			shell.rm("-f", innoZip);
@@ -312,7 +316,7 @@ async function main() {
 				"ndi/lib/macOS/",
 			);
 			shell.mv(
-				path.join(workDir, "NDI SDK for Apple/lib/libndi_licenses.txt"),
+				path.join(workDir, "NDI SDK for Apple/lib/macOS/libndi_licenses.txt"),
 				"ndi/lib/",
 			);
 			shell.mv(
