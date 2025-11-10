@@ -18,4 +18,4 @@ These upstream materials are used under the terms of the Apache License, Version
 
 NDI is a trademark of NewTek, Inc. NewTek NDI SDK headers/libraries are subject
 to their respective licenses as provided by NewTek (see the repository's
-license exceptions and the contents of the lib/ folder).
+license exceptions and the contents of the ndi/lib/ folder).
