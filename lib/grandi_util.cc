@@ -25,14 +25,12 @@
 using namespace std;
 
 // Implementation of itoa()
-char *custom_itoa(int num, char *str, int base)
-{
+char *custom_itoa(int num, char *str, int base) {
   int i = 0;
   bool isNegative = false;
 
   /* Handle 0 explicitely, otherwise empty string is printed for 0 */
-  if (num == 0)
-  {
+  if (num == 0) {
     str[i++] = '0';
     str[i] = '\0';
     return str;
@@ -40,15 +38,13 @@ char *custom_itoa(int num, char *str, int base)
 
   // In standard itoa(), negative numbers are handled only with
   // base 10. Otherwise numbers are considered unsigned.
-  if (num < 0 && base == 10)
-  {
+  if (num < 0 && base == 10) {
     isNegative = true;
     num = -num;
   }
 
   // Process individual digits
-  while (num != 0)
-  {
+  while (num != 0) {
     int rem = num % base;
     str[i++] = (rem > 9) ? (rem - 10) + 'a' : rem + '0';
     num = num / base;
@@ -66,15 +62,13 @@ char *custom_itoa(int num, char *str, int base)
   return str;
 }
 
-napi_status checkStatus(napi_env env, napi_status status,
-                        const char *file, uint32_t line)
-{
+napi_status checkStatus(napi_env env, napi_status status, const char *file,
+                        uint32_t line) {
 
   napi_status infoStatus, throwStatus;
   const napi_extended_error_info *errorInfo;
 
-  if (status == napi_ok)
-  {
+  if (status == napi_ok) {
     return status;
   }
 
@@ -83,30 +77,28 @@ napi_status checkStatus(napi_env env, napi_status status,
   printf("NAPI error in file %s on line %i. Error %i: %s\n", file, line,
          errorInfo->error_code, errorInfo->error_message);
 
-  if (status == napi_pending_exception)
-  {
-    printf("NAPI pending exception. Engine error code: %i\n", errorInfo->engine_error_code);
+  if (status == napi_pending_exception) {
+    printf("NAPI pending exception. Engine error code: %i\n",
+           errorInfo->engine_error_code);
     return status;
   }
 
   char errorCode[20];
-  throwStatus = napi_throw_error(env,
-                                 custom_itoa(errorInfo->error_code, errorCode, 10), errorInfo->error_message);
+  throwStatus =
+      napi_throw_error(env, custom_itoa(errorInfo->error_code, errorCode, 10),
+                       errorInfo->error_message);
   assert(throwStatus == napi_ok);
 
   return napi_pending_exception; // Expect to be cast to void
 }
 
-long long microTime(std::chrono::high_resolution_clock::time_point start)
-{
+long long microTime(std::chrono::high_resolution_clock::time_point start) {
   auto elapsed = std::chrono::high_resolution_clock::now() - start;
   return std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
 }
 
-const char *getNapiTypeName(napi_valuetype t)
-{
-  switch (t)
-  {
+const char *getNapiTypeName(napi_valuetype t) {
+  switch (t) {
   case napi_undefined:
     return "undefined";
   case napi_null:
@@ -131,8 +123,7 @@ const char *getNapiTypeName(napi_valuetype t)
 }
 
 napi_status checkArgs(napi_env env, napi_callback_info info, char *methodName,
-                      napi_value *args, size_t argc, napi_valuetype *types)
-{
+                      napi_value *args, size_t argc, napi_valuetype *types) {
 
   napi_status status;
 
@@ -141,8 +132,7 @@ napi_status checkArgs(napi_env env, napi_callback_info info, char *methodName,
   if (status != napi_ok)
     return status;
 
-  if (realArgc != argc)
-  {
+  if (realArgc != argc) {
     char errorMsg[100];
     sprintf(errorMsg, "For method %s, expected %zi arguments and got %zi.",
             methodName, argc, realArgc);
@@ -151,15 +141,14 @@ napi_status checkArgs(napi_env env, napi_callback_info info, char *methodName,
   }
 
   napi_valuetype t;
-  for (int x = 0; x < (int)argc; x++)
-  {
+  for (int x = 0; x < (int)argc; x++) {
     status = napi_typeof(env, args[x], &t);
     if (status != napi_ok)
       return status;
-    if (t != types[x])
-    {
+    if (t != types[x]) {
       char errorMsg[100];
-      sprintf(errorMsg, "For method %s argument %i, expected type %s and got %s.",
+      sprintf(errorMsg,
+              "For method %s argument %i, expected type %s and got %s.",
               methodName, x + 1, getNapiTypeName(types[x]), getNapiTypeName(t));
       napi_throw_error(env, nullptr, errorMsg);
       return napi_pending_exception;
@@ -169,40 +158,36 @@ napi_status checkArgs(napi_env env, napi_callback_info info, char *methodName,
   return napi_ok;
 };
 
-void tidyCarrier(napi_env env, carrier *c)
-{
+void tidyCarrier(napi_env env, carrier *c) {
   napi_status status;
-  if (c->passthru != nullptr)
-  {
+  if (c->passthru != nullptr) {
     status = napi_delete_reference(env, c->passthru);
     FLOATING_STATUS;
   }
-  if (c->_request != nullptr)
-  {
+  if (c->_request != nullptr) {
     status = napi_delete_async_work(env, c->_request);
     FLOATING_STATUS;
   }
   delete c;
 }
 
-int32_t rejectStatus(napi_env env, carrier *c, const char *file, int32_t line)
-{
-  if (c->status != GRANDI_SUCCESS)
-  {
+int32_t rejectStatus(napi_env env, carrier *c, const char *file, int32_t line) {
+  if (c->status != GRANDI_SUCCESS) {
     napi_value errorValue, errorCode, errorMsg;
     napi_status status;
     char errorChars[20];
-    if (c->status < GRANDI_ERROR_START)
-    {
+    if (c->status < GRANDI_ERROR_START) {
       const napi_extended_error_info *errorInfo;
       status = napi_get_last_error_info(env, &errorInfo);
       FLOATING_STATUS;
       c->errorMsg = std::string(errorInfo->error_message);
     }
     char *extMsg = (char *)malloc(sizeof(char) * c->errorMsg.length() + 200);
-    sprintf(extMsg, "In file %s on line %i, found error: %s", file, line, c->errorMsg.c_str());
-    status = napi_create_string_utf8(env, custom_itoa(c->status, errorChars, 10),
-                                     NAPI_AUTO_LENGTH, &errorCode);
+    sprintf(extMsg, "In file %s on line %i, found error: %s", file, line,
+            c->errorMsg.c_str());
+    status =
+        napi_create_string_utf8(env, custom_itoa(c->status, errorChars, 10),
+                                NAPI_AUTO_LENGTH, &errorCode);
     FLOATING_STATUS;
     status = napi_create_string_utf8(env, extMsg, NAPI_AUTO_LENGTH, &errorMsg);
     FLOATING_STATUS;
@@ -217,10 +202,8 @@ int32_t rejectStatus(napi_env env, carrier *c, const char *file, int32_t line)
   return c->status;
 }
 
-bool validColorFormat(NDIlib_recv_color_format_e format)
-{
-  switch (format)
-  {
+bool validColorFormat(NDIlib_recv_color_format_e format) {
+  switch (format) {
   case NDIlib_recv_color_format_BGRX_BGRA:
   case NDIlib_recv_color_format_UYVY_BGRA:
   case NDIlib_recv_color_format_RGBX_RGBA:
@@ -235,10 +218,8 @@ bool validColorFormat(NDIlib_recv_color_format_e format)
   }
 }
 
-bool validBandwidth(NDIlib_recv_bandwidth_e bandwidth)
-{
-  switch (bandwidth)
-  {
+bool validBandwidth(NDIlib_recv_bandwidth_e bandwidth) {
+  switch (bandwidth) {
   case NDIlib_recv_bandwidth_metadata_only:
   case NDIlib_recv_bandwidth_audio_only:
   case NDIlib_recv_bandwidth_lowest:
@@ -249,10 +230,8 @@ bool validBandwidth(NDIlib_recv_bandwidth_e bandwidth)
   }
 }
 
-bool validFrameFormat(NDIlib_frame_format_type_e format)
-{
-  switch (format)
-  {
+bool validFrameFormat(NDIlib_frame_format_type_e format) {
+  switch (format) {
   case NDIlib_frame_format_type_progressive:
   case NDIlib_frame_format_type_interleaved:
   case NDIlib_frame_format_type_field_0:
@@ -263,10 +242,8 @@ bool validFrameFormat(NDIlib_frame_format_type_e format)
   }
 }
 
-bool validAudioFormat(Grandi_audio_format_e format)
-{
-  switch (format)
-  {
+bool validAudioFormat(Grandi_audio_format_e format) {
+  switch (format) {
   case Grandi_audio_format_float_32_separate:
   case Grandi_audio_format_int_16_interleaved:
   case Grandi_audio_format_float_32_interleaved:
@@ -277,8 +254,8 @@ bool validAudioFormat(Grandi_audio_format_e format)
 }
 
 // Make a native source object from components of a source object
-napi_status makeNativeSource(napi_env env, napi_value source, NDIlib_source_t *result)
-{
+napi_status makeNativeSource(napi_env env, napi_value source,
+                             NDIlib_source_t *result) {
   result->p_ndi_name = nullptr;
   result->p_url_address = nullptr;
 
@@ -296,16 +273,14 @@ napi_status makeNativeSource(napi_env env, napi_value source, NDIlib_source_t *r
 
   status = napi_typeof(env, namev, &type);
   PASS_STATUS;
-  if (type == napi_string)
-  {
+  if (type == napi_string) {
     status = napi_get_value_string_utf8(env, namev, nullptr, 0, &namel);
     PASS_STATUS;
     name = (char *)malloc(namel + 1);
     if (!name)
       return napi_generic_failure;
     status = napi_get_value_string_utf8(env, namev, name, namel + 1, &namel);
-    if (status != napi_ok)
-    {
+    if (status != napi_ok) {
       free(name);
       return status;
     }
@@ -313,19 +288,16 @@ napi_status makeNativeSource(napi_env env, napi_value source, NDIlib_source_t *r
 
   status = napi_typeof(env, urlv, &type);
   PASS_STATUS;
-  if (type == napi_string)
-  {
+  if (type == napi_string) {
     status = napi_get_value_string_utf8(env, urlv, nullptr, 0, &urll);
     PASS_STATUS;
     url = (char *)malloc(urll + 1);
-    if (!url)
-    {
+    if (!url) {
       free(name);
       return napi_generic_failure;
     }
     status = napi_get_value_string_utf8(env, urlv, url, urll + 1, &urll);
-    if (status != napi_ok)
-    {
+    if (status != napi_ok) {
       free(name);
       free(url);
       return status;
@@ -337,17 +309,14 @@ napi_status makeNativeSource(napi_env env, napi_value source, NDIlib_source_t *r
   return napi_ok;
 }
 
-void freeNativeSource(NDIlib_source_t *result)
-{
+void freeNativeSource(NDIlib_source_t *result) {
   if (result == nullptr)
     return;
-  if (result->p_ndi_name != nullptr)
-  {
+  if (result->p_ndi_name != nullptr) {
     free((void *)result->p_ndi_name);
     result->p_ndi_name = nullptr;
   }
-  if (result->p_url_address != nullptr)
-  {
+  if (result->p_url_address != nullptr) {
     free((void *)result->p_url_address);
     result->p_url_address = nullptr;
   }

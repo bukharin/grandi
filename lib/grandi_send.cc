@@ -34,107 +34,104 @@ napi_value metadataSend(napi_env env, napi_callback_info info);
 napi_value tally(napi_env env, napi_callback_info info);
 napi_value sourcename(napi_env env, napi_callback_info info);
 
-namespace
-{
-  bool getInt64FromValue(napi_env env, napi_value value, int64_t *out, carrier *c, const char *propName)
-  {
-    napi_valuetype type;
-    c->status = napi_typeof(env, value, &type);
-    if (c->status != napi_ok)
-      return false;
-    if (type == napi_number)
-    {
-      c->status = napi_get_value_int64(env, value, out);
-      return c->status == napi_ok;
-    }
-    if (type == napi_bigint)
-    {
-      bool lossless;
-      c->status = napi_get_value_bigint_int64(env, value, out, &lossless);
-      return c->status == napi_ok;
-    }
-    c->errorMsg = std::string(propName) + " value must be a number, bigint, or a [seconds,nanoseconds] tuple.";
+namespace {
+bool getInt64FromValue(napi_env env, napi_value value, int64_t *out, carrier *c,
+                       const char *propName) {
+  napi_valuetype type;
+  c->status = napi_typeof(env, value, &type);
+  if (c->status != napi_ok)
+    return false;
+  if (type == napi_number) {
+    c->status = napi_get_value_int64(env, value, out);
+    return c->status == napi_ok;
+  }
+  if (type == napi_bigint) {
+    bool lossless;
+    c->status = napi_get_value_bigint_int64(env, value, out, &lossless);
+    return c->status == napi_ok;
+  }
+  c->errorMsg =
+      std::string(propName) +
+      " value must be a number, bigint, or a [seconds,nanoseconds] tuple.";
+  c->status = GRANDI_INVALID_ARGS;
+  return false;
+}
+
+bool parsePtpTimestampArray(napi_env env, napi_value value, int64_t *out,
+                            carrier *c, const char *propName) {
+  bool isArray;
+  c->status = napi_is_array(env, value, &isArray);
+  if (c->status != napi_ok)
+    return false;
+  if (!isArray) {
+    c->errorMsg =
+        std::string(propName) + " value must be a [seconds,nanoseconds] array.";
     c->status = GRANDI_INVALID_ARGS;
     return false;
   }
 
-  bool parsePtpTimestampArray(napi_env env, napi_value value, int64_t *out, carrier *c, const char *propName)
-  {
-    bool isArray;
-    c->status = napi_is_array(env, value, &isArray);
-    if (c->status != napi_ok)
-      return false;
-    if (!isArray)
-    {
-      c->errorMsg = std::string(propName) + " value must be a [seconds,nanoseconds] array.";
-      c->status = GRANDI_INVALID_ARGS;
-      return false;
-    }
-
-    uint32_t length;
-    c->status = napi_get_array_length(env, value, &length);
-    if (c->status != napi_ok)
-      return false;
-    if (length < 2)
-    {
-      c->errorMsg = std::string(propName) + " array must contain two numeric entries.";
-      c->status = GRANDI_INVALID_ARGS;
-      return false;
-    }
-
-    napi_value secsValue, nanosValue;
-    c->status = napi_get_element(env, value, 0, &secsValue);
-    if (c->status != napi_ok)
-      return false;
-    c->status = napi_get_element(env, value, 1, &nanosValue);
-    if (c->status != napi_ok)
-      return false;
-
-    int64_t seconds = 0;
-    if (!getInt64FromValue(env, secsValue, &seconds, c, propName))
-      return false;
-
-    int64_t nanos = 0;
-    if (!getInt64FromValue(env, nanosValue, &nanos, c, propName))
-      return false;
-
-    int64_t hundredNsFromSeconds = seconds * 10000000LL;
-    int64_t hundredNsFromNanos = nanos / 100LL;
-    *out = hundredNsFromSeconds + hundredNsFromNanos;
-    return true;
+  uint32_t length;
+  c->status = napi_get_array_length(env, value, &length);
+  if (c->status != napi_ok)
+    return false;
+  if (length < 2) {
+    c->errorMsg =
+        std::string(propName) + " array must contain two numeric entries.";
+    c->status = GRANDI_INVALID_ARGS;
+    return false;
   }
 
-  bool parseTimeProperty(napi_env env, napi_value object, const char *propName, int64_t *target, carrier *c)
-  {
-    napi_value property;
-    c->status = napi_get_named_property(env, object, propName, &property);
-    if (c->status != napi_ok)
-      return false;
+  napi_value secsValue, nanosValue;
+  c->status = napi_get_element(env, value, 0, &secsValue);
+  if (c->status != napi_ok)
+    return false;
+  c->status = napi_get_element(env, value, 1, &nanosValue);
+  if (c->status != napi_ok)
+    return false;
 
-    napi_valuetype type;
-    c->status = napi_typeof(env, property, &type);
-    if (c->status != napi_ok)
-      return false;
+  int64_t seconds = 0;
+  if (!getInt64FromValue(env, secsValue, &seconds, c, propName))
+    return false;
 
-    if (type == napi_undefined)
-      return true;
+  int64_t nanos = 0;
+  if (!getInt64FromValue(env, nanosValue, &nanos, c, propName))
+    return false;
 
-    if (type == napi_object)
-    {
-      bool isArray;
-      c->status = napi_is_array(env, property, &isArray);
-      if (c->status != napi_ok)
-        return false;
-      if (isArray)
-        return parsePtpTimestampArray(env, property, target, c, propName);
-    }
-
-    return getInt64FromValue(env, property, target, c, propName);
-  }
+  int64_t hundredNsFromSeconds = seconds * 10000000LL;
+  int64_t hundredNsFromNanos = nanos / 100LL;
+  *out = hundredNsFromSeconds + hundredNsFromNanos;
+  return true;
 }
 
-void sendExecute(napi_env env, void *data)
-{
+bool parseTimeProperty(napi_env env, napi_value object, const char *propName,
+                       int64_t *target, carrier *c) {
+  napi_value property;
+  c->status = napi_get_named_property(env, object, propName, &property);
+  if (c->status != napi_ok)
+    return false;
+
+  napi_valuetype type;
+  c->status = napi_typeof(env, property, &type);
+  if (c->status != napi_ok)
+    return false;
+
+  if (type == napi_undefined)
+    return true;
+
+  if (type == napi_object) {
+    bool isArray;
+    c->status = napi_is_array(env, property, &isArray);
+    if (c->status != napi_ok)
+      return false;
+    if (isArray)
+      return parsePtpTimestampArray(env, property, target, c, propName);
+  }
+
+  return getInt64FromValue(env, property, target, c, propName);
+}
+} // namespace
+
+void sendExecute(napi_env env, void *data) {
   sendCarrier *c = (sendCarrier *)data;
 
   NDIlib_send_create_t NDI_send_create_desc;
@@ -144,8 +141,7 @@ void sendExecute(napi_env env, void *data)
   NDI_send_create_desc.clock_video = c->clockVideo;
   NDI_send_create_desc.clock_audio = c->clockAudio;
   c->send = NDIlib_send_create(&NDI_send_create_desc);
-  if (!c->send)
-  {
+  if (!c->send) {
     c->status = GRANDI_SEND_CREATE_FAIL;
     c->errorMsg = "Failed to create NDI sender.";
     return;
@@ -153,8 +149,7 @@ void sendExecute(napi_env env, void *data)
 }
 
 /*  implicit destruction of NDI sender via garbage collection  */
-void finalizeSend(napi_env env, void *data, void *hint)
-{
+void finalizeSend(napi_env env, void *data, void *hint) {
   /*  fetch NDI sender wrapper object  */
   napi_value obj = (napi_value)hint;
 
@@ -181,24 +176,24 @@ void finalizeSend(napi_env env, void *data, void *hint)
 }
 
 /*  explicit destruction of NDI sender via "destroy" method  */
-napi_value destroySend(napi_env env, napi_callback_info info)
-{
+napi_value destroySend(napi_env env, napi_callback_info info) {
   bool success = false;
   napi_value thisValue;
   size_t argc = 0;
-  if (napi_get_cb_info(env, info, &argc, nullptr, &thisValue, nullptr) != napi_ok)
+  if (napi_get_cb_info(env, info, &argc, nullptr, &thisValue, nullptr) !=
+      napi_ok)
     goto create_result;
 
   napi_value sendValue;
-  if (napi_get_named_property(env, thisValue, "embedded", &sendValue) != napi_ok)
+  if (napi_get_named_property(env, thisValue, "embedded", &sendValue) !=
+      napi_ok)
     goto create_result;
 
   napi_valuetype resultType;
   if (napi_typeof(env, sendValue, &resultType) != napi_ok)
     goto create_result;
 
-  if (resultType == napi_external)
-  {
+  if (resultType == napi_external) {
     void *sendData;
     if (napi_get_value_external(env, sendValue, &sendData) != napi_ok)
       goto create_result;
@@ -212,19 +207,16 @@ napi_value destroySend(napi_env env, napi_callback_info info)
 
 create_result:
   napi_value result;
-  if (napi_get_boolean(env, success, &result) != napi_ok)
-  {
+  if (napi_get_boolean(env, success, &result) != napi_ok) {
     napi_get_boolean(env, false, &result);
   }
   return result;
 }
 
-void sendComplete(napi_env env, napi_status asyncStatus, void *data)
-{
+void sendComplete(napi_env env, napi_status asyncStatus, void *data) {
   sendCarrier *c = (sendCarrier *)data;
 
-  if (asyncStatus != napi_ok)
-  {
+  if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
     c->errorMsg = "Async sender creation failed to complete.";
   }
@@ -235,14 +227,15 @@ void sendComplete(napi_env env, napi_status asyncStatus, void *data)
   REJECT_STATUS;
 
   napi_value embedded;
-  c->status = napi_create_external(env, c->send, finalizeSend, result, &embedded);
+  c->status =
+      napi_create_external(env, c->send, finalizeSend, result, &embedded);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "embedded", embedded);
   REJECT_STATUS;
 
   napi_value destroyFn;
-  c->status = napi_create_function(env, "destroy", NAPI_AUTO_LENGTH, destroySend,
-                                   nullptr, &destroyFn);
+  c->status = napi_create_function(env, "destroy", NAPI_AUTO_LENGTH,
+                                   destroySend, nullptr, &destroyFn);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "destroy", destroyFn);
   REJECT_STATUS;
@@ -262,17 +255,18 @@ void sendComplete(napi_env env, napi_status asyncStatus, void *data)
   REJECT_STATUS;
 
   napi_value metadataFn;
-  c->status = napi_create_function(env, "metadata", NAPI_AUTO_LENGTH, metadataSend,
-                                   nullptr, &metadataFn);
+  c->status = napi_create_function(env, "metadata", NAPI_AUTO_LENGTH,
+                                   metadataSend, nullptr, &metadataFn);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "metadata", metadataFn);
   REJECT_STATUS;
 
   napi_value connectionsFn;
-  c->status = napi_create_function(env, "connections", NAPI_AUTO_LENGTH, connections,
-                                   nullptr, &connectionsFn);
+  c->status = napi_create_function(env, "connections", NAPI_AUTO_LENGTH,
+                                   connections, nullptr, &connectionsFn);
   REJECT_STATUS;
-  c->status = napi_set_named_property(env, result, "connections", connectionsFn);
+  c->status =
+      napi_set_named_property(env, result, "connections", connectionsFn);
   REJECT_STATUS;
 
   napi_value tallyFn;
@@ -283,8 +277,8 @@ void sendComplete(napi_env env, napi_status asyncStatus, void *data)
   REJECT_STATUS;
 
   napi_value sourcenameFn;
-  c->status = napi_create_function(env, "sourcename", NAPI_AUTO_LENGTH, sourcename,
-                                   nullptr, &sourcenameFn);
+  c->status = napi_create_function(env, "sourcename", NAPI_AUTO_LENGTH,
+                                   sourcename, nullptr, &sourcenameFn);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "sourcename", sourcenameFn);
   REJECT_STATUS;
@@ -295,9 +289,9 @@ void sendComplete(napi_env env, napi_status asyncStatus, void *data)
   c->status = napi_set_named_property(env, result, "name", name);
   REJECT_STATUS;
 
-  if (c->groups != nullptr)
-  {
-    c->status = napi_create_string_utf8(env, c->groups, NAPI_AUTO_LENGTH, &groups);
+  if (c->groups != nullptr) {
+    c->status =
+        napi_create_string_utf8(env, c->groups, NAPI_AUTO_LENGTH, &groups);
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result, "groups", groups);
     REJECT_STATUS;
@@ -320,8 +314,7 @@ void sendComplete(napi_env env, napi_status asyncStatus, void *data)
   tidyCarrier(env, c);
 }
 
-napi_value send(napi_env env, napi_callback_info info)
-{
+napi_value send(napi_env env, napi_callback_info info) {
   napi_valuetype type;
   sendCarrier *c = new sendCarrier;
 
@@ -335,9 +328,9 @@ napi_value send(napi_env env, napi_callback_info info)
   REJECT_RETURN;
 
   if (argc != (size_t)1)
-    REJECT_ERROR_RETURN(
-        "Sender must be created with an object containing at least a 'name' property.",
-        GRANDI_INVALID_ARGS);
+    REJECT_ERROR_RETURN("Sender must be created with an object containing at "
+                        "least a 'name' property.",
+                        GRANDI_INVALID_ARGS);
 
   c->status = napi_typeof(env, args[0], &type);
   REJECT_RETURN;
@@ -345,9 +338,9 @@ napi_value send(napi_env env, napi_callback_info info)
   c->status = napi_is_array(env, args[0], &isArray);
   REJECT_RETURN;
   if ((type != napi_object) || isArray)
-    REJECT_ERROR_RETURN(
-        "Single argument must be an object, not an array, containing at least a 'name' property.",
-        GRANDI_INVALID_ARGS);
+    REJECT_ERROR_RETURN("Single argument must be an object, not an array, "
+                        "containing at least a 'name' property.",
+                        GRANDI_INVALID_ARGS);
 
   napi_value config = args[0];
   napi_value name, groups, clockVideo, clockAudio;
@@ -357,9 +350,8 @@ napi_value send(napi_env env, napi_callback_info info)
   c->status = napi_typeof(env, name, &type);
   REJECT_RETURN;
   if (type != napi_string)
-    REJECT_ERROR_RETURN(
-        "Name property must be of type string.",
-        GRANDI_INVALID_ARGS);
+    REJECT_ERROR_RETURN("Name property must be of type string.",
+                        GRANDI_INVALID_ARGS);
   size_t namel;
   c->status = napi_get_value_string_utf8(env, name, nullptr, 0, &namel);
   REJECT_RETURN;
@@ -371,17 +363,16 @@ napi_value send(napi_env env, napi_callback_info info)
   REJECT_RETURN;
   c->status = napi_typeof(env, groups, &type);
   REJECT_RETURN;
-  if (type != napi_undefined)
-  {
+  if (type != napi_undefined) {
     if (type != napi_string)
-      REJECT_ERROR_RETURN(
-          "Groups value must be a string when provided.",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("Groups value must be a string when provided.",
+                          GRANDI_INVALID_ARGS);
     size_t groupsLen;
     c->status = napi_get_value_string_utf8(env, groups, nullptr, 0, &groupsLen);
     REJECT_RETURN;
     c->groups = (char *)malloc(groupsLen + 1);
-    c->status = napi_get_value_string_utf8(env, groups, c->groups, groupsLen + 1, &groupsLen);
+    c->status = napi_get_value_string_utf8(env, groups, c->groups,
+                                           groupsLen + 1, &groupsLen);
     REJECT_RETURN;
   }
 
@@ -389,12 +380,10 @@ napi_value send(napi_env env, napi_callback_info info)
   REJECT_RETURN;
   c->status = napi_typeof(env, clockVideo, &type);
   REJECT_RETURN;
-  if (type != napi_undefined)
-  {
+  if (type != napi_undefined) {
     if (type != napi_boolean)
-      REJECT_ERROR_RETURN(
-          "ClockVideo property must be of type boolean.",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("ClockVideo property must be of type boolean.",
+                          GRANDI_INVALID_ARGS);
     c->status = napi_get_value_bool(env, clockVideo, &c->clockVideo);
     REJECT_RETURN;
   }
@@ -403,18 +392,17 @@ napi_value send(napi_env env, napi_callback_info info)
   REJECT_RETURN;
   c->status = napi_typeof(env, clockAudio, &type);
   REJECT_RETURN;
-  if (type != napi_undefined)
-  {
+  if (type != napi_undefined) {
     if (type != napi_boolean)
-      REJECT_ERROR_RETURN(
-          "ClockAudio property must be of type boolean.",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("ClockAudio property must be of type boolean.",
+                          GRANDI_INVALID_ARGS);
     c->status = napi_get_value_bool(env, clockAudio, &c->clockAudio);
     REJECT_RETURN;
   }
 
   napi_value resource_name;
-  c->status = napi_create_string_utf8(env, "Send", NAPI_AUTO_LENGTH, &resource_name);
+  c->status =
+      napi_create_string_utf8(env, "Send", NAPI_AUTO_LENGTH, &resource_name);
   REJECT_RETURN;
   c->status = napi_create_async_work(env, NULL, resource_name, sendExecute,
                                      sendComplete, c, &c->_request);
@@ -425,28 +413,24 @@ napi_value send(napi_env env, napi_callback_info info)
   return promise;
 }
 
-void videoSendExecute(napi_env env, void *data)
-{
+void videoSendExecute(napi_env env, void *data) {
   sendDataCarrier *c = (sendDataCarrier *)data;
 
   NDIlib_send_send_video_v2(c->send, &c->videoFrame);
 }
 
-void videoSendComplete(napi_env env, napi_status asyncStatus, void *data)
-{
+void videoSendComplete(napi_env env, napi_status asyncStatus, void *data) {
   sendDataCarrier *c = (sendDataCarrier *)data;
   napi_value result;
   napi_status status;
 
-  if (c->passthru != nullptr)
-  {
+  if (c->passthru != nullptr) {
     c->status = napi_delete_reference(env, c->passthru);
     c->passthru = nullptr;
     REJECT_STATUS;
   }
 
-  if (asyncStatus != napi_ok)
-  {
+  if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
     c->errorMsg = "Async video frame send failed to complete.";
   }
@@ -460,8 +444,7 @@ void videoSendComplete(napi_env env, napi_status asyncStatus, void *data)
   tidyCarrier(env, c);
 }
 
-napi_value videoSend(napi_env env, napi_callback_info info)
-{
+napi_value videoSend(napi_env env, napi_callback_info info) {
   napi_valuetype type;
   sendDataCarrier *c = new sendDataCarrier;
 
@@ -483,24 +466,20 @@ napi_value videoSend(napi_env env, napi_callback_info info)
   c->send = (NDIlib_send_instance_t)sendData;
   REJECT_RETURN;
 
-  if (argc >= 1)
-  {
+  if (argc >= 1) {
     napi_value config;
     config = args[0];
     c->status = napi_typeof(env, config, &type);
     REJECT_RETURN;
     if (type != napi_object)
-      REJECT_ERROR_RETURN(
-          "frame must be an object",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("frame must be an object", GRANDI_INVALID_ARGS);
 
     bool isArray, isBuffer;
     c->status = napi_is_array(env, config, &isArray);
     REJECT_RETURN;
     if (isArray)
-      REJECT_ERROR_RETURN(
-          "Argument to video send cannot be an array.",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("Argument to video send cannot be an array.",
+                          GRANDI_INVALID_ARGS);
 
     napi_value param;
     c->status = napi_get_named_property(env, config, "xres", &param);
@@ -508,9 +487,7 @@ napi_value videoSend(napi_env env, napi_callback_info info)
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "yres value must be a number",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("yres value must be a number", GRANDI_INVALID_ARGS);
     c->status = napi_get_value_int32(env, param, &c->videoFrame.xres);
     REJECT_RETURN;
 
@@ -519,9 +496,7 @@ napi_value videoSend(napi_env env, napi_callback_info info)
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "yres value must be a number",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("yres value must be a number", GRANDI_INVALID_ARGS);
     c->status = napi_get_value_int32(env, param, &c->videoFrame.yres);
     REJECT_RETURN;
 
@@ -530,9 +505,8 @@ napi_value videoSend(napi_env env, napi_callback_info info)
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "frameRateN value must be a number",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("frameRateN value must be a number",
+                          GRANDI_INVALID_ARGS);
     c->status = napi_get_value_int32(env, param, &c->videoFrame.frame_rate_N);
     REJECT_RETURN;
 
@@ -541,20 +515,19 @@ napi_value videoSend(napi_env env, napi_callback_info info)
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "frameRateD value must be a number",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("frameRateD value must be a number",
+                          GRANDI_INVALID_ARGS);
     c->status = napi_get_value_int32(env, param, &c->videoFrame.frame_rate_D);
     REJECT_RETURN;
 
-    c->status = napi_get_named_property(env, config, "pictureAspectRatio", &param);
+    c->status =
+        napi_get_named_property(env, config, "pictureAspectRatio", &param);
     REJECT_RETURN;
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "pictureAspectRatio value must be a number",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("pictureAspectRatio value must be a number",
+                          GRANDI_INVALID_ARGS);
     double pictureAspectRatio;
     c->status = napi_get_value_double(env, param, &pictureAspectRatio);
     REJECT_RETURN;
@@ -565,7 +538,8 @@ napi_value videoSend(napi_env env, napi_callback_info info)
       REJECT_RETURN;
 
     c->videoFrame.timestamp = 0;
-    if (!parseTimeProperty(env, config, "timestamp", &c->videoFrame.timestamp, c))
+    if (!parseTimeProperty(env, config, "timestamp", &c->videoFrame.timestamp,
+                           c))
       REJECT_RETURN;
 
     c->frameMetadata.clear();
@@ -574,18 +548,21 @@ napi_value videoSend(napi_env env, napi_callback_info info)
     REJECT_RETURN;
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
-    if (type != napi_undefined)
-    {
+    if (type != napi_undefined) {
       if (type != napi_string)
-        REJECT_ERROR_RETURN("metadata value must be a string", GRANDI_INVALID_ARGS);
+        REJECT_ERROR_RETURN("metadata value must be a string",
+                            GRANDI_INVALID_ARGS);
       size_t metadataLen;
-      c->status = napi_get_value_string_utf8(env, param, nullptr, 0, &metadataLen);
+      c->status =
+          napi_get_value_string_utf8(env, param, nullptr, 0, &metadataLen);
       REJECT_RETURN;
       c->frameMetadata.resize(metadataLen + 1);
-      c->status = napi_get_value_string_utf8(env, param, c->frameMetadata.data(), metadataLen + 1, &metadataLen);
+      c->status = napi_get_value_string_utf8(
+          env, param, c->frameMetadata.data(), metadataLen + 1, &metadataLen);
       REJECT_RETURN;
       c->frameMetadata.resize(metadataLen);
-      c->videoFrame.p_metadata = c->frameMetadata.empty() ? nullptr : c->frameMetadata.c_str();
+      c->videoFrame.p_metadata =
+          c->frameMetadata.empty() ? nullptr : c->frameMetadata.c_str();
     }
 
     c->status = napi_get_named_property(env, config, "frameFormatType", &param);
@@ -593,9 +570,8 @@ napi_value videoSend(napi_env env, napi_callback_info info)
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "frameFormatType value must be a number",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("frameFormatType value must be a number",
+                          GRANDI_INVALID_ARGS);
     int32_t formatType;
     c->status = napi_get_value_int32(env, param, &formatType);
     REJECT_RETURN;
@@ -607,10 +583,10 @@ napi_value videoSend(napi_env env, napi_callback_info info)
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "lineStrideBytes value must be a number",
-          GRANDI_INVALID_ARGS);
-    c->status = napi_get_value_int32(env, param, &c->videoFrame.line_stride_in_bytes);
+      REJECT_ERROR_RETURN("lineStrideBytes value must be a number",
+                          GRANDI_INVALID_ARGS);
+    c->status =
+        napi_get_value_int32(env, param, &c->videoFrame.line_stride_in_bytes);
     REJECT_RETURN;
 
     napi_value videoBuffer;
@@ -619,9 +595,8 @@ napi_value videoSend(napi_env env, napi_callback_info info)
     c->status = napi_is_buffer(env, videoBuffer, &isBuffer);
     REJECT_RETURN;
     if (!isBuffer)
-      REJECT_ERROR_RETURN(
-          "data must be provided as a Node Buffer",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("data must be provided as a Node Buffer",
+                          GRANDI_INVALID_ARGS);
     void *data;
     size_t length;
     c->status = napi_get_buffer_info(env, videoBuffer, &data, &length);
@@ -638,22 +613,18 @@ napi_value videoSend(napi_env env, napi_callback_info info)
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "fourCC value must be a number",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("fourCC value must be a number", GRANDI_INVALID_ARGS);
     int32_t fourCC;
     c->status = napi_get_value_int32(env, param, &fourCC);
     REJECT_RETURN;
     // TODO: checks
     c->videoFrame.FourCC = (NDIlib_FourCC_video_type_e)fourCC; // TODO
-  }
-  else
-    REJECT_ERROR_RETURN(
-        "frame not provided",
-        GRANDI_INVALID_ARGS);
+  } else
+    REJECT_ERROR_RETURN("frame not provided", GRANDI_INVALID_ARGS);
 
   napi_value resource_name;
-  c->status = napi_create_string_utf8(env, "VideoSend", NAPI_AUTO_LENGTH, &resource_name);
+  c->status = napi_create_string_utf8(env, "VideoSend", NAPI_AUTO_LENGTH,
+                                      &resource_name);
   REJECT_RETURN;
   c->status = napi_create_async_work(env, NULL, resource_name, videoSendExecute,
                                      videoSendComplete, c, &c->_request);
@@ -664,28 +635,24 @@ napi_value videoSend(napi_env env, napi_callback_info info)
   return promise;
 }
 
-void audioSendExecute(napi_env env, void *data)
-{
+void audioSendExecute(napi_env env, void *data) {
   sendDataCarrier *c = (sendDataCarrier *)data;
 
   NDIlib_send_send_audio_v3(c->send, &c->audioFrame);
 }
 
-void audioSendComplete(napi_env env, napi_status asyncStatus, void *data)
-{
+void audioSendComplete(napi_env env, napi_status asyncStatus, void *data) {
   sendDataCarrier *c = (sendDataCarrier *)data;
   napi_value result;
   napi_status status;
 
-  if (c->passthru != nullptr)
-  {
+  if (c->passthru != nullptr) {
     c->status = napi_delete_reference(env, c->passthru);
     c->passthru = nullptr;
     REJECT_STATUS;
   }
 
-  if (asyncStatus != napi_ok)
-  {
+  if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
     c->errorMsg = "Async audio frame send failed to complete.";
   }
@@ -699,8 +666,7 @@ void audioSendComplete(napi_env env, napi_status asyncStatus, void *data)
   tidyCarrier(env, c);
 }
 
-napi_value audioSend(napi_env env, napi_callback_info info)
-{
+napi_value audioSend(napi_env env, napi_callback_info info) {
   napi_valuetype type;
   sendDataCarrier *c = new sendDataCarrier;
 
@@ -722,24 +688,20 @@ napi_value audioSend(napi_env env, napi_callback_info info)
   c->send = (NDIlib_send_instance_t)sendData;
   REJECT_RETURN;
 
-  if (argc >= 1)
-  {
+  if (argc >= 1) {
     napi_value config;
     config = args[0];
     c->status = napi_typeof(env, config, &type);
     REJECT_RETURN;
     if (type != napi_object)
-      REJECT_ERROR_RETURN(
-          "frame must be an object",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("frame must be an object", GRANDI_INVALID_ARGS);
 
     bool isArray, isBuffer;
     c->status = napi_is_array(env, config, &isArray);
     REJECT_RETURN;
     if (isArray)
-      REJECT_ERROR_RETURN(
-          "Argument to audio send cannot be an array.",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("Argument to audio send cannot be an array.",
+                          GRANDI_INVALID_ARGS);
 
     napi_value param;
     c->status = napi_get_named_property(env, config, "sampleRate", &param);
@@ -747,9 +709,8 @@ napi_value audioSend(napi_env env, napi_callback_info info)
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "sampleRate value must be a number",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("sampleRate value must be a number",
+                          GRANDI_INVALID_ARGS);
     c->status = napi_get_value_int32(env, param, &c->audioFrame.sample_rate);
     REJECT_RETURN;
 
@@ -758,9 +719,8 @@ napi_value audioSend(napi_env env, napi_callback_info info)
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "noChannels value must be a number",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("noChannels value must be a number",
+                          GRANDI_INVALID_ARGS);
     c->status = napi_get_value_int32(env, param, &c->audioFrame.no_channels);
     REJECT_RETURN;
 
@@ -769,9 +729,8 @@ napi_value audioSend(napi_env env, napi_callback_info info)
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "Samples value must be a number",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("Samples value must be a number",
+                          GRANDI_INVALID_ARGS);
     c->status = napi_get_value_int32(env, param, &c->audioFrame.no_samples);
     REJECT_RETURN;
 
@@ -780,7 +739,8 @@ napi_value audioSend(napi_env env, napi_callback_info info)
       REJECT_RETURN;
 
     c->audioFrame.timestamp = 0;
-    if (!parseTimeProperty(env, config, "timestamp", &c->audioFrame.timestamp, c))
+    if (!parseTimeProperty(env, config, "timestamp", &c->audioFrame.timestamp,
+                           c))
       REJECT_RETURN;
 
     c->frameMetadata.clear();
@@ -789,29 +749,33 @@ napi_value audioSend(napi_env env, napi_callback_info info)
     REJECT_RETURN;
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
-    if (type != napi_undefined)
-    {
+    if (type != napi_undefined) {
       if (type != napi_string)
-        REJECT_ERROR_RETURN("metadata value must be a string", GRANDI_INVALID_ARGS);
+        REJECT_ERROR_RETURN("metadata value must be a string",
+                            GRANDI_INVALID_ARGS);
       size_t metadataLen;
-      c->status = napi_get_value_string_utf8(env, param, nullptr, 0, &metadataLen);
+      c->status =
+          napi_get_value_string_utf8(env, param, nullptr, 0, &metadataLen);
       REJECT_RETURN;
       c->frameMetadata.resize(metadataLen + 1);
-      c->status = napi_get_value_string_utf8(env, param, c->frameMetadata.data(), metadataLen + 1, &metadataLen);
+      c->status = napi_get_value_string_utf8(
+          env, param, c->frameMetadata.data(), metadataLen + 1, &metadataLen);
       REJECT_RETURN;
       c->frameMetadata.resize(metadataLen);
-      c->audioFrame.p_metadata = c->frameMetadata.empty() ? nullptr : c->frameMetadata.c_str();
+      c->audioFrame.p_metadata =
+          c->frameMetadata.empty() ? nullptr : c->frameMetadata.c_str();
     }
 
-    c->status = napi_get_named_property(env, config, "channelStrideBytes", &param);
+    c->status =
+        napi_get_named_property(env, config, "channelStrideBytes", &param);
     REJECT_RETURN;
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "channelStrideBytes value must be a number",
-          GRANDI_INVALID_ARGS);
-    c->status = napi_get_value_int32(env, param, &c->audioFrame.channel_stride_in_bytes);
+      REJECT_ERROR_RETURN("channelStrideBytes value must be a number",
+                          GRANDI_INVALID_ARGS);
+    c->status = napi_get_value_int32(env, param,
+                                     &c->audioFrame.channel_stride_in_bytes);
     REJECT_RETURN;
 
     napi_value audioBuffer;
@@ -820,9 +784,8 @@ napi_value audioSend(napi_env env, napi_callback_info info)
     c->status = napi_is_buffer(env, audioBuffer, &isBuffer);
     REJECT_RETURN;
     if (!isBuffer)
-      REJECT_ERROR_RETURN(
-          "data must be provided as a Node Buffer",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("data must be provided as a Node Buffer",
+                          GRANDI_INVALID_ARGS);
     void *data;
     size_t length;
     c->status = napi_get_buffer_info(env, audioBuffer, &data, &length);
@@ -838,21 +801,17 @@ napi_value audioSend(napi_env env, napi_callback_info info)
     c->status = napi_typeof(env, param, &type);
     REJECT_RETURN;
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "fourCC value must be a number",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("fourCC value must be a number", GRANDI_INVALID_ARGS);
     int32_t fourCC;
     c->status = napi_get_value_int32(env, param, &fourCC);
     REJECT_RETURN;
     c->audioFrame.FourCC = (NDIlib_FourCC_audio_type_e)fourCC;
-  }
-  else
-    REJECT_ERROR_RETURN(
-        "frame not provided",
-        GRANDI_INVALID_ARGS);
+  } else
+    REJECT_ERROR_RETURN("frame not provided", GRANDI_INVALID_ARGS);
 
   napi_value resource_name;
-  c->status = napi_create_string_utf8(env, "AudioSend", NAPI_AUTO_LENGTH, &resource_name);
+  c->status = napi_create_string_utf8(env, "AudioSend", NAPI_AUTO_LENGTH,
+                                      &resource_name);
   REJECT_RETURN;
   c->status = napi_create_async_work(env, NULL, resource_name, audioSendExecute,
                                      audioSendComplete, c, &c->_request);
@@ -863,8 +822,7 @@ napi_value audioSend(napi_env env, napi_callback_info info)
   return promise;
 }
 
-napi_value connections(napi_env env, napi_callback_info info)
-{
+napi_value connections(napi_env env, napi_callback_info info) {
   napi_status status;
 
   size_t argc = 1;
@@ -889,8 +847,7 @@ napi_value connections(napi_env env, napi_callback_info info)
   return result;
 }
 
-napi_value tally(napi_env env, napi_callback_info info)
-{
+napi_value tally(napi_env env, napi_callback_info info) {
   napi_status status;
 
   size_t argc = 1;
@@ -928,8 +885,7 @@ napi_value tally(napi_env env, napi_callback_info info)
   return result;
 }
 
-napi_value metadataSend(napi_env env, napi_callback_info info)
-{
+napi_value metadataSend(napi_env env, napi_callback_info info) {
   napi_status status;
 
   size_t argc = 1;
@@ -959,7 +915,8 @@ napi_value metadataSend(napi_env env, napi_callback_info info)
   status = napi_get_value_string_utf8(env, args[0], nullptr, 0, &length);
   CHECK_STATUS;
   std::string metadata(length + 1, '\0');
-  status = napi_get_value_string_utf8(env, args[0], metadata.data(), length + 1, &length);
+  status = napi_get_value_string_utf8(env, args[0], metadata.data(), length + 1,
+                                      &length);
   CHECK_STATUS;
   metadata.resize(length);
 
@@ -976,8 +933,7 @@ napi_value metadataSend(napi_env env, napi_callback_info info)
   return result;
 }
 
-napi_value sourcename(napi_env env, napi_callback_info info)
-{
+napi_value sourcename(napi_env env, napi_callback_info info) {
   napi_status status;
 
   size_t argc = 1;
@@ -996,7 +952,8 @@ napi_value sourcename(napi_env env, napi_callback_info info)
 
   const NDIlib_source_t *source = NDIlib_send_get_source_name(sender);
   napi_value result;
-  status = napi_create_string_utf8(env, source->p_ndi_name, NAPI_AUTO_LENGTH, &result);
+  status = napi_create_string_utf8(env, source->p_ndi_name, NAPI_AUTO_LENGTH,
+                                   &result);
   CHECK_STATUS;
 
   return result;

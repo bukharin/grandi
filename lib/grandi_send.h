@@ -22,22 +22,19 @@
 
 napi_value send(napi_env env, napi_callback_info info);
 
-struct sendCarrier : carrier
-{
+struct sendCarrier : carrier {
   char *name = nullptr;
   char *groups = nullptr;
   bool clockVideo = false;
   bool clockAudio = false;
   NDIlib_send_instance_t send;
-  ~sendCarrier()
-  {
+  ~sendCarrier() {
     free(name);
     free(groups);
   }
 };
 
-struct sendDataCarrier : carrier
-{
+struct sendDataCarrier : carrier {
   NDIlib_send_instance_t send;
   NDIlib_video_frame_v2_t videoFrame;
   NDIlib_audio_frame_v3_t audioFrame;

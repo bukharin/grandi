@@ -29,92 +29,78 @@
 #include "grandi_util.h"
 #include "grandi_find.h"
 
-namespace
-{
-  uint32_t remainingWaitMs(uint32_t initialWait,
-                           const std::chrono::steady_clock::time_point &start)
-  {
-    if (initialWait == 0)
-      return 0;
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                       std::chrono::steady_clock::now() - start)
-                       .count();
-    if (elapsed >= initialWait)
-      return 0;
-    return initialWait - static_cast<uint32_t>(elapsed);
-  }
+namespace {
+uint32_t remainingWaitMs(uint32_t initialWait,
+                         const std::chrono::steady_clock::time_point &start) {
+  if (initialWait == 0)
+    return 0;
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::steady_clock::now() - start)
+                     .count();
+  if (elapsed >= initialWait)
+    return 0;
+  return initialWait - static_cast<uint32_t>(elapsed);
+}
 
-  void freeCapturedFrame(dataCarrier *c, NDIlib_frame_type_e frameType)
-  {
-    switch (frameType)
-    {
+void freeCapturedFrame(dataCarrier *c, NDIlib_frame_type_e frameType) {
+  switch (frameType) {
+  case NDIlib_frame_type_video:
+    NDIlib_recv_free_video_v2(c->recv, &c->videoFrame);
+    break;
+  case NDIlib_frame_type_audio:
+    NDIlib_recv_free_audio_v3(c->recv, &c->audioFrame);
+    break;
+  case NDIlib_frame_type_metadata:
+    NDIlib_recv_free_metadata(c->recv, &c->metadataFrame);
+    break;
+  default:
+    break;
+  }
+}
+
+bool captureUntilFrame(dataCarrier *c, NDIlib_frame_type_e desired,
+                       uint32_t initialWait, int32_t timeoutStatus,
+                       const char *timeoutMsg, const char *connectionMsg) {
+  auto start = std::chrono::steady_clock::now();
+  uint32_t waitMs = initialWait;
+
+  while (true) {
+    NDIlib_frame_type_e frameType = NDIlib_recv_capture_v3(
+        c->recv, &c->videoFrame, &c->audioFrame, &c->metadataFrame, waitMs);
+
+    if (frameType == desired)
+      return true;
+
+    switch (frameType) {
+    case NDIlib_frame_type_none:
+      c->status = timeoutStatus;
+      c->errorMsg = timeoutMsg;
+      return false;
+    case NDIlib_frame_type_error:
+      c->status = GRANDI_CONNECTION_LOST;
+      c->errorMsg = connectionMsg;
+      return false;
     case NDIlib_frame_type_video:
-      NDIlib_recv_free_video_v2(c->recv, &c->videoFrame);
-      break;
     case NDIlib_frame_type_audio:
-      NDIlib_recv_free_audio_v3(c->recv, &c->audioFrame);
-      break;
     case NDIlib_frame_type_metadata:
-      NDIlib_recv_free_metadata(c->recv, &c->metadataFrame);
+      freeCapturedFrame(c, frameType);
       break;
     default:
       break;
     }
-  }
 
-  bool captureUntilFrame(dataCarrier *c,
-                         NDIlib_frame_type_e desired,
-                         uint32_t initialWait,
-                         int32_t timeoutStatus,
-                         const char *timeoutMsg,
-                         const char *connectionMsg)
-  {
-    auto start = std::chrono::steady_clock::now();
-    uint32_t waitMs = initialWait;
-
-    while (true)
-    {
-      NDIlib_frame_type_e frameType =
-          NDIlib_recv_capture_v3(c->recv, &c->videoFrame, &c->audioFrame,
-                                 &c->metadataFrame, waitMs);
-
-      if (frameType == desired)
-        return true;
-
-      switch (frameType)
-      {
-      case NDIlib_frame_type_none:
-        c->status = timeoutStatus;
-        c->errorMsg = timeoutMsg;
-        return false;
-      case NDIlib_frame_type_error:
-        c->status = GRANDI_CONNECTION_LOST;
-        c->errorMsg = connectionMsg;
-        return false;
-      case NDIlib_frame_type_video:
-      case NDIlib_frame_type_audio:
-      case NDIlib_frame_type_metadata:
-        freeCapturedFrame(c, frameType);
-        break;
-      default:
-        break;
-      }
-
-      waitMs = remainingWaitMs(initialWait, start);
-      if (initialWait != 0 && waitMs == 0)
-      {
-        c->status = timeoutStatus;
-        c->errorMsg = timeoutMsg;
-        return false;
-      }
+    waitMs = remainingWaitMs(initialWait, start);
+    if (initialWait != 0 && waitMs == 0) {
+      c->status = timeoutStatus;
+      c->errorMsg = timeoutMsg;
+      return false;
     }
   }
 }
+} // namespace
 
-void finalizeReceive(napi_env env, void *data, void *hint)
-{
-  if (hint == nullptr)
-  {
+void finalizeReceive(napi_env env, void *data, void *hint) {
+  if (hint == nullptr) {
     NDIlib_recv_destroy((NDIlib_recv_instance_t)data);
     return;
   }
@@ -136,24 +122,24 @@ void finalizeReceive(napi_env env, void *data, void *hint)
   NDIlib_recv_destroy((NDIlib_recv_instance_t)recvData);
 }
 
-napi_value destroyReceive(napi_env env, napi_callback_info info)
-{
+napi_value destroyReceive(napi_env env, napi_callback_info info) {
   bool success = false;
   napi_value thisValue;
   size_t argc = 0;
-  if (napi_get_cb_info(env, info, &argc, nullptr, &thisValue, nullptr) != napi_ok)
+  if (napi_get_cb_info(env, info, &argc, nullptr, &thisValue, nullptr) !=
+      napi_ok)
     goto done;
 
   napi_value recvValue;
-  if (napi_get_named_property(env, thisValue, "embedded", &recvValue) != napi_ok)
+  if (napi_get_named_property(env, thisValue, "embedded", &recvValue) !=
+      napi_ok)
     goto done;
 
   napi_valuetype type;
   if (napi_typeof(env, recvValue, &type) != napi_ok)
     goto done;
 
-  if (type == napi_external)
-  {
+  if (type == napi_external) {
     void *recvData;
     if (napi_get_value_external(env, recvValue, &recvData) != napi_ok)
       goto done;
@@ -171,8 +157,7 @@ done:
   return result;
 }
 
-void receiveExecute(napi_env env, void *data)
-{
+void receiveExecute(napi_env env, void *data) {
   receiveCarrier *c = (receiveCarrier *)data;
 
   NDIlib_recv_create_v3_t receiveConfig;
@@ -182,8 +167,7 @@ void receiveExecute(napi_env env, void *data)
   receiveConfig.p_ndi_recv_name = c->name;
 
   c->recv = NDIlib_recv_create_v3(&receiveConfig);
-  if (!c->recv)
-  {
+  if (!c->recv) {
     c->status = GRANDI_RECEIVE_CREATE_FAIL;
     c->errorMsg = "Failed to create NDI receiver.";
     return;
@@ -192,12 +176,10 @@ void receiveExecute(napi_env env, void *data)
   NDIlib_recv_connect(c->recv, c->source);
 }
 
-void receiveComplete(napi_env env, napi_status asyncStatus, void *data)
-{
+void receiveComplete(napi_env env, napi_status asyncStatus, void *data) {
   receiveCarrier *c = (receiveCarrier *)data;
 
-  if (asyncStatus != napi_ok)
-  {
+  if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
     c->errorMsg = "Async receiver creation failed to complete.";
   }
@@ -208,14 +190,15 @@ void receiveComplete(napi_env env, napi_status asyncStatus, void *data)
   REJECT_STATUS;
 
   napi_value embedded;
-  c->status = napi_create_external(env, c->recv, finalizeReceive, result, &embedded);
+  c->status =
+      napi_create_external(env, c->recv, finalizeReceive, result, &embedded);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "embedded", embedded);
   REJECT_STATUS;
 
   napi_value destroyFn;
-  c->status = napi_create_function(env, "destroy", NAPI_AUTO_LENGTH, destroyReceive,
-                                   nullptr, &destroyFn);
+  c->status = napi_create_function(env, "destroy", NAPI_AUTO_LENGTH,
+                                   destroyReceive, nullptr, &destroyFn);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "destroy", destroyFn);
   REJECT_STATUS;
@@ -235,8 +218,8 @@ void receiveComplete(napi_env env, napi_status asyncStatus, void *data)
   REJECT_STATUS;
 
   napi_value metadataFn;
-  c->status = napi_create_function(env, "metadata", NAPI_AUTO_LENGTH, metadataReceive,
-                                   nullptr, &metadataFn);
+  c->status = napi_create_function(env, "metadata", NAPI_AUTO_LENGTH,
+                                   metadataReceive, nullptr, &metadataFn);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "metadata", metadataFn);
   REJECT_STATUS;
@@ -249,18 +232,19 @@ void receiveComplete(napi_env env, napi_status asyncStatus, void *data)
   REJECT_STATUS;
 
   napi_value tallyFn;
-  c->status = napi_create_function(env, "tally", NAPI_AUTO_LENGTH, setReceiveTally,
-                                   nullptr, &tallyFn);
+  c->status = napi_create_function(env, "tally", NAPI_AUTO_LENGTH,
+                                   setReceiveTally, nullptr, &tallyFn);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "tally", tallyFn);
   REJECT_STATUS;
 
   napi_value source, name, uri;
-  c->status = napi_create_string_utf8(env, c->source->p_ndi_name, NAPI_AUTO_LENGTH, &name);
+  c->status = napi_create_string_utf8(env, c->source->p_ndi_name,
+                                      NAPI_AUTO_LENGTH, &name);
   REJECT_STATUS;
-  if (c->source->p_url_address != NULL)
-  {
-    c->status = napi_create_string_utf8(env, c->source->p_url_address, NAPI_AUTO_LENGTH, &uri);
+  if (c->source->p_url_address != NULL) {
+    c->status = napi_create_string_utf8(env, c->source->p_url_address,
+                                        NAPI_AUTO_LENGTH, &uri);
     REJECT_STATUS;
   }
   c->status = napi_create_object(env, &source);
@@ -287,11 +271,11 @@ void receiveComplete(napi_env env, napi_status asyncStatus, void *data)
   napi_value allowVideoFields;
   c->status = napi_get_boolean(env, c->allowVideoFields, &allowVideoFields);
   REJECT_STATUS;
-  c->status = napi_set_named_property(env, result, "allowVideoFields", allowVideoFields);
+  c->status = napi_set_named_property(env, result, "allowVideoFields",
+                                      allowVideoFields);
   REJECT_STATUS;
 
-  if (c->name != nullptr)
-  {
+  if (c->name != nullptr) {
     c->status = napi_create_string_utf8(env, c->name, NAPI_AUTO_LENGTH, &name);
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result, "name", name);
@@ -305,8 +289,7 @@ void receiveComplete(napi_env env, napi_status asyncStatus, void *data)
   tidyCarrier(env, c);
 }
 
-napi_value receive(napi_env env, napi_callback_info info)
-{
+napi_value receive(napi_env env, napi_callback_info info) {
   napi_valuetype type;
   receiveCarrier *c = new receiveCarrier;
 
@@ -320,9 +303,9 @@ napi_value receive(napi_env env, napi_callback_info info)
   REJECT_RETURN;
 
   if (argc != (size_t)1)
-    REJECT_ERROR_RETURN(
-        "Receiver must be created with an object containing at least a 'source' property.",
-        GRANDI_INVALID_ARGS);
+    REJECT_ERROR_RETURN("Receiver must be created with an object containing at "
+                        "least a 'source' property.",
+                        GRANDI_INVALID_ARGS);
 
   c->status = napi_typeof(env, args[0], &type);
   REJECT_RETURN;
@@ -330,9 +313,9 @@ napi_value receive(napi_env env, napi_callback_info info)
   c->status = napi_is_array(env, args[0], &isArray);
   REJECT_RETURN;
   if ((type != napi_object) || isArray)
-    REJECT_ERROR_RETURN(
-        "Single argument must be an object, not an array, containing at least a 'source' property.",
-        GRANDI_INVALID_ARGS);
+    REJECT_ERROR_RETURN("Single argument must be an object, not an array, "
+                        "containing at least a 'source' property.",
+                        GRANDI_INVALID_ARGS);
 
   napi_value config = args[0];
   napi_value source, colorFormat, bandwidth, allowVideoFields, name;
@@ -345,9 +328,8 @@ napi_value receive(napi_env env, napi_callback_info info)
   c->status = napi_is_array(env, source, &isArray);
   REJECT_RETURN;
   if ((type != napi_object) || isArray)
-    REJECT_ERROR_RETURN(
-        "Source property must be an object and not an array.",
-        GRANDI_INVALID_ARGS);
+    REJECT_ERROR_RETURN("Source property must be an object and not an array.",
+                        GRANDI_INVALID_ARGS);
 
   napi_value checkType;
   c->status = napi_get_named_property(env, source, "name", &checkType);
@@ -355,9 +337,9 @@ napi_value receive(napi_env env, napi_callback_info info)
   c->status = napi_typeof(env, checkType, &type);
   REJECT_RETURN;
   if (type != napi_string)
-    REJECT_ERROR_RETURN(
-        "Source property must have a 'name' sub-property that is of type string.",
-        GRANDI_INVALID_ARGS);
+    REJECT_ERROR_RETURN("Source property must have a 'name' sub-property that "
+                        "is of type string.",
+                        GRANDI_INVALID_ARGS);
 
   c->status = napi_get_named_property(env, source, "urlAddress", &checkType);
   REJECT_RETURN;
@@ -376,63 +358,54 @@ napi_value receive(napi_env env, napi_callback_info info)
   REJECT_RETURN;
   c->status = napi_typeof(env, colorFormat, &type);
   REJECT_RETURN;
-  if (type != napi_undefined)
-  {
+  if (type != napi_undefined) {
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "Color format property must be a number.",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("Color format property must be a number.",
+                          GRANDI_INVALID_ARGS);
     int32_t enumValue;
     c->status = napi_get_value_int32(env, colorFormat, &enumValue);
     REJECT_RETURN;
 
     c->colorFormat = (NDIlib_recv_color_format_e)enumValue;
     if (!validColorFormat(c->colorFormat))
-      REJECT_ERROR_RETURN(
-          "Invalid colour format value.",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("Invalid colour format value.", GRANDI_INVALID_ARGS);
   }
 
   c->status = napi_get_named_property(env, config, "bandwidth", &bandwidth);
   REJECT_RETURN;
   c->status = napi_typeof(env, bandwidth, &type);
   REJECT_RETURN;
-  if (type != napi_undefined)
-  {
+  if (type != napi_undefined) {
     if (type != napi_number)
-      REJECT_ERROR_RETURN(
-          "Bandwidth property must be a number.",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("Bandwidth property must be a number.",
+                          GRANDI_INVALID_ARGS);
     int32_t enumValue;
     c->status = napi_get_value_int32(env, bandwidth, &enumValue);
     REJECT_RETURN;
 
     c->bandwidth = (NDIlib_recv_bandwidth_e)enumValue;
     if (!validBandwidth(c->bandwidth))
-      REJECT_ERROR_RETURN(
-          "Invalid bandwidth value.",
-          GRANDI_INVALID_ARGS);
+      REJECT_ERROR_RETURN("Invalid bandwidth value.", GRANDI_INVALID_ARGS);
   }
 
-  c->status = napi_get_named_property(env, config, "allowVideoFields", &allowVideoFields);
+  c->status = napi_get_named_property(env, config, "allowVideoFields",
+                                      &allowVideoFields);
   REJECT_RETURN;
   c->status = napi_typeof(env, allowVideoFields, &type);
   REJECT_RETURN;
-  if (type != napi_undefined)
-  {
+  if (type != napi_undefined) {
     if (type != napi_boolean)
-      REJECT_ERROR_RETURN(
-          "Allow video fields property must be a Boolean.",
-          GRANDI_INVALID_ARGS);
-    c->status = napi_get_value_bool(env, allowVideoFields, &c->allowVideoFields);
+      REJECT_ERROR_RETURN("Allow video fields property must be a Boolean.",
+                          GRANDI_INVALID_ARGS);
+    c->status =
+        napi_get_value_bool(env, allowVideoFields, &c->allowVideoFields);
     REJECT_RETURN;
   }
 
   c->status = napi_get_named_property(env, config, "name", &name);
   REJECT_RETURN;
   c->status = napi_typeof(env, name, &type);
-  if (type != napi_undefined)
-  {
+  if (type != napi_undefined) {
     if (type != napi_string)
       REJECT_ERROR_RETURN(
           "Optional name property must be a string when present.",
@@ -441,12 +414,14 @@ napi_value receive(napi_env env, napi_callback_info info)
     c->status = napi_get_value_string_utf8(env, name, nullptr, 0, &namel);
     REJECT_RETURN;
     c->name = (char *)malloc(namel + 1);
-    c->status = napi_get_value_string_utf8(env, name, c->name, namel + 1, &namel);
+    c->status =
+        napi_get_value_string_utf8(env, name, c->name, namel + 1, &namel);
     REJECT_RETURN;
   }
 
   napi_value resource_name;
-  c->status = napi_create_string_utf8(env, "Receive", NAPI_AUTO_LENGTH, &resource_name);
+  c->status =
+      napi_create_string_utf8(env, "Receive", NAPI_AUTO_LENGTH, &resource_name);
   REJECT_RETURN;
   c->status = napi_create_async_work(env, NULL, resource_name, receiveExecute,
                                      receiveComplete, c, &c->_request);
@@ -457,25 +432,20 @@ napi_value receive(napi_env env, napi_callback_info info)
   return promise;
 }
 
-void videoReceiveExecute(napi_env env, void *data)
-{
+void videoReceiveExecute(napi_env env, void *data) {
   dataCarrier *c = (dataCarrier *)data;
 
-  if (!captureUntilFrame(c,
-                         NDIlib_frame_type_video,
-                         c->wait,
-                         GRANDI_NOT_FOUND,
-                         "No video data received in the requested time interval.",
-                         "Received error response from NDI video request. Connection lost."))
+  if (!captureUntilFrame(
+          c, NDIlib_frame_type_video, c->wait, GRANDI_NOT_FOUND,
+          "No video data received in the requested time interval.",
+          "Received error response from NDI video request. Connection lost."))
     return;
 }
 
-void videoReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
-{
+void videoReceiveComplete(napi_env env, napi_status asyncStatus, void *data) {
   dataCarrier *c = (dataCarrier *)data;
 
-  if (asyncStatus != napi_ok)
-  {
+  if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
     c->errorMsg = "Async video frame receive failed to complete.";
   }
@@ -515,7 +485,8 @@ void videoReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   c->status = napi_set_named_property(env, result, "frameRateD", param);
   REJECT_STATUS;
 
-  c->status = napi_create_double(env, (double)c->videoFrame.picture_aspect_ratio, &param);
+  c->status = napi_create_double(
+      env, (double)c->videoFrame.picture_aspect_ratio, &param);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "pictureAspectRatio", param);
   REJECT_STATUS;
@@ -544,9 +515,11 @@ void videoReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   c->status = napi_set_named_property(env, result, "frameFormatType", param);
   REJECT_STATUS;
 
-  c->status = napi_create_int32(env, (int32_t)c->videoFrame.timecode / 10000000, &params);
+  c->status = napi_create_int32(env, (int32_t)c->videoFrame.timecode / 10000000,
+                                &params);
   REJECT_STATUS;
-  c->status = napi_create_int32(env, (c->videoFrame.timecode % 10000000) * 100, &paramn);
+  c->status = napi_create_int32(env, (c->videoFrame.timecode % 10000000) * 100,
+                                &paramn);
   REJECT_STATUS;
   c->status = napi_create_array(env, &param);
   REJECT_STATUS;
@@ -557,22 +530,23 @@ void videoReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   c->status = napi_set_named_property(env, result, "timecode", param);
   REJECT_STATUS;
 
-  c->status = napi_create_int32(env, c->videoFrame.line_stride_in_bytes, &param);
+  c->status =
+      napi_create_int32(env, c->videoFrame.line_stride_in_bytes, &param);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "lineStrideBytes", param);
   REJECT_STATUS;
 
-  if (c->videoFrame.p_metadata != nullptr)
-  {
-    c->status = napi_create_string_utf8(env, c->videoFrame.p_metadata, NAPI_AUTO_LENGTH, &param);
+  if (c->videoFrame.p_metadata != nullptr) {
+    c->status = napi_create_string_utf8(env, c->videoFrame.p_metadata,
+                                        NAPI_AUTO_LENGTH, &param);
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result, "metadata", param);
     REJECT_STATUS;
   }
 
-  c->status = napi_create_buffer_copy(env,
-                                      c->videoFrame.line_stride_in_bytes * c->videoFrame.yres,
-                                      (void *)c->videoFrame.p_data, nullptr, &param);
+  c->status = napi_create_buffer_copy(
+      env, c->videoFrame.line_stride_in_bytes * c->videoFrame.yres,
+      (void *)c->videoFrame.p_data, nullptr, &param);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "data", param);
   REJECT_STATUS;
@@ -586,8 +560,7 @@ void videoReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   tidyCarrier(env, c);
 }
 
-napi_value setReceiveTally(napi_env env, napi_callback_info info)
-{
+napi_value setReceiveTally(napi_env env, napi_callback_info info) {
   napi_status status;
 
   size_t argc = 1;
@@ -597,7 +570,8 @@ napi_value setReceiveTally(napi_env env, napi_callback_info info)
   CHECK_STATUS;
 
   if (argc != 1)
-    NAPI_THROW_ERROR("Receiver tally must be called with a single options object.");
+    NAPI_THROW_ERROR(
+        "Receiver tally must be called with a single options object.");
 
   napi_value embedded;
   status = napi_get_named_property(env, thisValue, "embedded", &embedded);
@@ -624,8 +598,7 @@ napi_value setReceiveTally(napi_env env, napi_callback_info info)
   CHECK_STATUS;
   status = napi_typeof(env, checkType, &type);
   CHECK_STATUS;
-  if (type != napi_undefined)
-  {
+  if (type != napi_undefined) {
     if (type != napi_boolean)
       NAPI_THROW_ERROR("onProgram property must be a Boolean.");
     status = napi_get_value_bool(env, checkType, &onProgram);
@@ -636,8 +609,7 @@ napi_value setReceiveTally(napi_env env, napi_callback_info info)
   CHECK_STATUS;
   status = napi_typeof(env, checkType, &type);
   CHECK_STATUS;
-  if (type != napi_undefined)
-  {
+  if (type != napi_undefined) {
     if (type != napi_boolean)
       NAPI_THROW_ERROR("onPreview property must be a Boolean.");
     status = napi_get_value_bool(env, checkType, &onPreview);
@@ -655,8 +627,7 @@ napi_value setReceiveTally(napi_env env, napi_callback_info info)
   return result;
 }
 
-napi_value videoReceive(napi_env env, napi_callback_info info)
-{
+napi_value videoReceive(napi_env env, napi_callback_info info) {
   napi_valuetype type;
   dataCarrier *c = new dataCarrier;
 
@@ -678,22 +649,22 @@ napi_value videoReceive(napi_env env, napi_callback_info info)
   c->recv = (NDIlib_recv_instance_t)recvData;
   REJECT_RETURN;
 
-  if (argc >= 1)
-  {
+  if (argc >= 1) {
     c->status = napi_typeof(env, args[0], &type);
     REJECT_RETURN;
-    if (type == napi_number)
-    {
+    if (type == napi_number) {
       c->status = napi_get_value_uint32(env, args[0], &c->wait);
       REJECT_RETURN;
     }
   }
 
   napi_value resource_name;
-  c->status = napi_create_string_utf8(env, "VideoReceive", NAPI_AUTO_LENGTH, &resource_name);
+  c->status = napi_create_string_utf8(env, "VideoReceive", NAPI_AUTO_LENGTH,
+                                      &resource_name);
   REJECT_RETURN;
-  c->status = napi_create_async_work(env, NULL, resource_name, videoReceiveExecute,
-                                     videoReceiveComplete, c, &c->_request);
+  c->status =
+      napi_create_async_work(env, NULL, resource_name, videoReceiveExecute,
+                             videoReceiveComplete, c, &c->_request);
   REJECT_RETURN;
   c->status = napi_queue_async_work(env, c->_request);
   REJECT_RETURN;
@@ -701,31 +672,30 @@ napi_value videoReceive(napi_env env, napi_callback_info info)
   return promise;
 }
 
-void audioReceiveExecute(napi_env env, void *data)
-{
+void audioReceiveExecute(napi_env env, void *data) {
   dataCarrier *c = (dataCarrier *)data;
 
-  if (!captureUntilFrame(c,
-                         NDIlib_frame_type_audio,
-                         c->wait,
-                         GRANDI_NOT_FOUND,
-                         "No audio data received in the requested time interval.",
-                         "Received error response from NDI audio request. Connection lost."))
+  if (!captureUntilFrame(
+          c, NDIlib_frame_type_audio, c->wait, GRANDI_NOT_FOUND,
+          "No audio data received in the requested time interval.",
+          "Received error response from NDI audio request. Connection lost."))
     return;
 
   const NDIlib_audio_frame_v2_t *audioFrameV2 =
       reinterpret_cast<const NDIlib_audio_frame_v2_t *>(&c->audioFrame);
 
-  switch (c->audioFormat)
-  {
+  switch (c->audioFormat) {
   case Grandi_audio_format_int_16_interleaved:
     c->audioFrame16s.reference_level = c->referenceLevel;
-    c->audioFrame16s.p_data = new short[c->audioFrame.no_samples * c->audioFrame.no_channels];
+    c->audioFrame16s.p_data =
+        new short[c->audioFrame.no_samples * c->audioFrame.no_channels];
     NDIlib_util_audio_to_interleaved_16s_v2(audioFrameV2, &c->audioFrame16s);
     break;
   case Grandi_audio_format_float_32_interleaved:
-    c->audioFrame32fIlvd.p_data = new float[c->audioFrame.no_samples * c->audioFrame.no_channels];
-    NDIlib_util_audio_to_interleaved_32f_v2(audioFrameV2, &c->audioFrame32fIlvd);
+    c->audioFrame32fIlvd.p_data =
+        new float[c->audioFrame.no_samples * c->audioFrame.no_channels];
+    NDIlib_util_audio_to_interleaved_32f_v2(audioFrameV2,
+                                            &c->audioFrame32fIlvd);
     break;
   case Grandi_audio_format_float_32_separate:
   default:
@@ -733,12 +703,10 @@ void audioReceiveExecute(napi_env env, void *data)
   }
 }
 
-void audioReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
-{
+void audioReceiveComplete(napi_env env, napi_status asyncStatus, void *data) {
   dataCarrier *c = (dataCarrier *)data;
 
-  if (asyncStatus != napi_ok)
-  {
+  if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
     c->errorMsg = "Async audio frame receive failed to complete.";
   }
@@ -763,8 +731,7 @@ void audioReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   c->status = napi_set_named_property(env, result, "audioFormat", param);
   REJECT_STATUS;
 
-  if (c->audioFormat == Grandi_audio_format_int_16_interleaved)
-  {
+  if (c->audioFormat == Grandi_audio_format_int_16_interleaved) {
     c->status = napi_create_int32(env, c->referenceLevel, &param);
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result, "referenceLevel", param);
@@ -786,10 +753,13 @@ void audioReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   c->status = napi_set_named_property(env, result, "samples", param);
   REJECT_STATUS;
 
-  int32_t factor = (c->audioFormat == Grandi_audio_format_int_16_interleaved) ? 2 : 1;
-  c->status = napi_create_int32(env, c->audioFrame.channel_stride_in_bytes / factor, &param);
+  int32_t factor =
+      (c->audioFormat == Grandi_audio_format_int_16_interleaved) ? 2 : 1;
+  c->status = napi_create_int32(
+      env, c->audioFrame.channel_stride_in_bytes / factor, &param);
   REJECT_STATUS;
-  c->status = napi_set_named_property(env, result, "channelStrideInBytes", param);
+  c->status =
+      napi_set_named_property(env, result, "channelStrideInBytes", param);
   REJECT_STATUS;
 
   napi_value params, paramn;
@@ -806,9 +776,11 @@ void audioReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   c->status = napi_set_named_property(env, result, "timestamp", param);
   REJECT_STATUS;
 
-  c->status = napi_create_int32(env, (int32_t)(c->audioFrame.timecode / 10000000), &params);
+  c->status = napi_create_int32(
+      env, (int32_t)(c->audioFrame.timecode / 10000000), &params);
   REJECT_STATUS;
-  c->status = napi_create_int32(env, (c->audioFrame.timecode % 10000000) * 100, &paramn);
+  c->status = napi_create_int32(env, (c->audioFrame.timecode % 10000000) * 100,
+                                &paramn);
   REJECT_STATUS;
   c->status = napi_create_array(env, &param);
   REJECT_STATUS;
@@ -819,17 +791,16 @@ void audioReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   c->status = napi_set_named_property(env, result, "timecode", param);
   REJECT_STATUS;
 
-  if (c->audioFrame.p_metadata != nullptr)
-  {
-    c->status = napi_create_string_utf8(env, c->audioFrame.p_metadata, NAPI_AUTO_LENGTH, &param);
+  if (c->audioFrame.p_metadata != nullptr) {
+    c->status = napi_create_string_utf8(env, c->audioFrame.p_metadata,
+                                        NAPI_AUTO_LENGTH, &param);
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result, "metadata", param);
     REJECT_STATUS;
   }
 
   char *rawFloats;
-  switch (c->audioFormat)
-  {
+  switch (c->audioFormat) {
   case Grandi_audio_format_int_16_interleaved:
     rawFloats = (char *)c->audioFrame16s.p_data;
     break;
@@ -841,9 +812,11 @@ void audioReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
     rawFloats = (char *)c->audioFrame.p_data;
     break;
   }
-  c->status = napi_create_buffer_copy(env,
-                                      (c->audioFrame.channel_stride_in_bytes / factor) * c->audioFrame.no_channels,
-                                      rawFloats, nullptr, &param);
+  c->status =
+      napi_create_buffer_copy(env,
+                              (c->audioFrame.channel_stride_in_bytes / factor) *
+                                  c->audioFrame.no_channels,
+                              rawFloats, nullptr, &param);
   REJECT_STATUS;
 
   c->status = napi_set_named_property(env, result, "data", param);
@@ -859,9 +832,9 @@ void audioReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
 }
 
 napi_value dataAndAudioReceive(napi_env env, napi_callback_info info,
-                               const char *resourceName, napi_async_execute_callback execute,
-                               napi_async_complete_callback complete)
-{
+                               const char *resourceName,
+                               napi_async_execute_callback execute,
+                               napi_async_complete_callback complete) {
   napi_valuetype type;
   dataCarrier *c = new dataCarrier;
 
@@ -883,15 +856,13 @@ napi_value dataAndAudioReceive(napi_env env, napi_callback_info info,
   c->recv = (NDIlib_recv_instance_t)recvData;
   REJECT_RETURN;
 
-  if (argc >= 1)
-  {
+  if (argc >= 1) {
     napi_value configValue, waitValue;
     configValue = args[0];
     c->status = napi_typeof(env, configValue, &type);
     REJECT_RETURN;
     waitValue = (type == napi_number) ? args[0] : args[1];
-    if (type == napi_object)
-    {
+    if (type == napi_object) {
       bool isArray;
       c->status = napi_is_array(env, configValue, &isArray);
       REJECT_RETURN;
@@ -901,50 +872,47 @@ napi_value dataAndAudioReceive(napi_env env, napi_callback_info info,
             GRANDI_INVALID_ARGS);
 
       napi_value param;
-      c->status = napi_get_named_property(env, configValue, "audioFormat", &param);
+      c->status =
+          napi_get_named_property(env, configValue, "audioFormat", &param);
       REJECT_RETURN;
       c->status = napi_typeof(env, param, &type);
       REJECT_RETURN;
-      if (type == napi_number)
-      {
+      if (type == napi_number) {
         uint32_t audioFormatN;
         c->status = napi_get_value_uint32(env, param, &audioFormatN);
         REJECT_RETURN;
         if (!validAudioFormat((Grandi_audio_format_e)audioFormatN))
-          REJECT_ERROR_RETURN(
-              "Invalid audio format specified.", GRANDI_INVALID_ARGS);
+          REJECT_ERROR_RETURN("Invalid audio format specified.",
+                              GRANDI_INVALID_ARGS);
         c->audioFormat = (Grandi_audio_format_e)audioFormatN;
-      }
-      else if (type != napi_undefined)
-        REJECT_ERROR_RETURN(
-            "Audio format value must be a number if present.",
-            GRANDI_INVALID_ARGS);
+      } else if (type != napi_undefined)
+        REJECT_ERROR_RETURN("Audio format value must be a number if present.",
+                            GRANDI_INVALID_ARGS);
 
-      c->status = napi_get_named_property(env, configValue, "referenceLevel", &param);
+      c->status =
+          napi_get_named_property(env, configValue, "referenceLevel", &param);
       REJECT_RETURN;
       c->status = napi_typeof(env, param, &type);
       REJECT_RETURN;
-      if (type == napi_number)
-      {
+      if (type == napi_number) {
         c->status = napi_get_value_int32(env, param, &c->referenceLevel);
         REJECT_RETURN;
-      }
-      else if (type != napi_undefined)
+      } else if (type != napi_undefined)
         REJECT_ERROR_RETURN(
             "Audio reference level must be a number if present.",
             GRANDI_INVALID_ARGS);
     }
     c->status = napi_typeof(env, waitValue, &type);
     REJECT_RETURN;
-    if (type == napi_number)
-    {
+    if (type == napi_number) {
       c->status = napi_get_value_uint32(env, waitValue, &c->wait);
       REJECT_RETURN;
     }
   }
 
   napi_value resource_name;
-  c->status = napi_create_string_utf8(env, resourceName, NAPI_AUTO_LENGTH, &resource_name);
+  c->status = napi_create_string_utf8(env, resourceName, NAPI_AUTO_LENGTH,
+                                      &resource_name);
   REJECT_RETURN;
   c->status = napi_create_async_work(env, NULL, resource_name, execute,
                                      complete, c, &c->_request);
@@ -955,31 +923,27 @@ napi_value dataAndAudioReceive(napi_env env, napi_callback_info info,
   return promise;
 }
 
-napi_value audioReceive(napi_env env, napi_callback_info info)
-{
-  return dataAndAudioReceive(env, info, "AudioReceive",
-                             audioReceiveExecute, audioReceiveComplete);
+napi_value audioReceive(napi_env env, napi_callback_info info) {
+  return dataAndAudioReceive(env, info, "AudioReceive", audioReceiveExecute,
+                             audioReceiveComplete);
 }
 
-void metadataReceiveExecute(napi_env env, void *data)
-{
+void metadataReceiveExecute(napi_env env, void *data) {
   dataCarrier *c = (dataCarrier *)data;
 
-  if (!captureUntilFrame(c,
-                         NDIlib_frame_type_metadata,
-                         c->wait,
+  if (!captureUntilFrame(c, NDIlib_frame_type_metadata, c->wait,
                          GRANDI_NOT_FOUND,
                          "No metadata received in the requested time interval.",
-                         "Received error response from NDI metadata request. Connection lost."))
+                         "Received error response from NDI metadata request. "
+                         "Connection lost."))
     return;
 }
 
-void metadataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
-{
+void metadataReceiveComplete(napi_env env, napi_status asyncStatus,
+                             void *data) {
   dataCarrier *c = (dataCarrier *)data;
 
-  if (asyncStatus != napi_ok)
-  {
+  if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
     c->errorMsg = "Async metadata payload receive failed to complete.";
   }
@@ -990,7 +954,8 @@ void metadataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   REJECT_STATUS;
 
   napi_value param;
-  c->status = napi_create_string_utf8(env, "metadata", NAPI_AUTO_LENGTH, &param);
+  c->status =
+      napi_create_string_utf8(env, "metadata", NAPI_AUTO_LENGTH, &param);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "type", param);
   REJECT_STATUS;
@@ -1001,9 +966,11 @@ void metadataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   REJECT_STATUS;
 
   napi_value params, paramn;
-  c->status = napi_create_int32(env, (int32_t)(c->metadataFrame.timecode / 10000000), &params);
+  c->status = napi_create_int32(
+      env, (int32_t)(c->metadataFrame.timecode / 10000000), &params);
   REJECT_STATUS;
-  c->status = napi_create_int32(env, (c->metadataFrame.timecode % 10000000) * 100, &paramn);
+  c->status = napi_create_int32(
+      env, (c->metadataFrame.timecode % 10000000) * 100, &paramn);
   REJECT_STATUS;
 
   napi_value timestampArray;
@@ -1025,7 +992,8 @@ void metadataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   c->status = napi_set_named_property(env, result, "timecode", param);
   REJECT_STATUS;
 
-  c->status = napi_create_string_utf8(env, c->metadataFrame.p_data, NAPI_AUTO_LENGTH, &param);
+  c->status = napi_create_string_utf8(env, c->metadataFrame.p_data,
+                                      NAPI_AUTO_LENGTH, &param);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "data", param);
   REJECT_STATUS;
@@ -1039,8 +1007,7 @@ void metadataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   tidyCarrier(env, c);
 }
 
-napi_value metadataReceive(napi_env env, napi_callback_info info)
-{
+napi_value metadataReceive(napi_env env, napi_callback_info info) {
   napi_valuetype type;
   dataCarrier *c = new dataCarrier;
 
@@ -1062,22 +1029,22 @@ napi_value metadataReceive(napi_env env, napi_callback_info info)
   c->recv = (NDIlib_recv_instance_t)recvData;
   REJECT_RETURN;
 
-  if (argc >= 1)
-  {
+  if (argc >= 1) {
     c->status = napi_typeof(env, args[0], &type);
     REJECT_RETURN;
-    if (type == napi_number)
-    {
+    if (type == napi_number) {
       c->status = napi_get_value_uint32(env, args[0], &c->wait);
       REJECT_RETURN;
     }
   }
 
   napi_value resource_name;
-  c->status = napi_create_string_utf8(env, "MetadataReceive", NAPI_AUTO_LENGTH, &resource_name);
+  c->status = napi_create_string_utf8(env, "MetadataReceive", NAPI_AUTO_LENGTH,
+                                      &resource_name);
   REJECT_RETURN;
-  c->status = napi_create_async_work(env, NULL, resource_name, metadataReceiveExecute,
-                                     metadataReceiveComplete, c, &c->_request);
+  c->status =
+      napi_create_async_work(env, NULL, resource_name, metadataReceiveExecute,
+                             metadataReceiveComplete, c, &c->_request);
   REJECT_RETURN;
   c->status = napi_queue_async_work(env, c->_request);
   REJECT_RETURN;
@@ -1085,29 +1052,29 @@ napi_value metadataReceive(napi_env env, napi_callback_info info)
   return promise;
 }
 
-void dataReceiveExecute(napi_env env, void *data)
-{
+void dataReceiveExecute(napi_env env, void *data) {
   dataCarrier *c = (dataCarrier *)data;
 
-  c->frameType = NDIlib_recv_capture_v3(c->recv, &c->videoFrame, &c->audioFrame, &c->metadataFrame, c->wait);
-  switch (c->frameType)
-  {
+  c->frameType = NDIlib_recv_capture_v3(c->recv, &c->videoFrame, &c->audioFrame,
+                                        &c->metadataFrame, c->wait);
+  switch (c->frameType) {
 
   // Audio data
-  case NDIlib_frame_type_audio:
-  {
+  case NDIlib_frame_type_audio: {
     const NDIlib_audio_frame_v2_t *audioFrameV2 =
         reinterpret_cast<const NDIlib_audio_frame_v2_t *>(&c->audioFrame);
-    switch (c->audioFormat)
-    {
+    switch (c->audioFormat) {
     case Grandi_audio_format_int_16_interleaved:
       c->audioFrame16s.reference_level = c->referenceLevel;
-      c->audioFrame16s.p_data = new short[c->audioFrame.no_samples * c->audioFrame.no_channels];
+      c->audioFrame16s.p_data =
+          new short[c->audioFrame.no_samples * c->audioFrame.no_channels];
       NDIlib_util_audio_to_interleaved_16s_v2(audioFrameV2, &c->audioFrame16s);
       break;
     case Grandi_audio_format_float_32_interleaved:
-      c->audioFrame32fIlvd.p_data = new float[c->audioFrame.no_samples * c->audioFrame.no_channels];
-      NDIlib_util_audio_to_interleaved_32f_v2(audioFrameV2, &c->audioFrame32fIlvd);
+      c->audioFrame32fIlvd.p_data =
+          new float[c->audioFrame.no_samples * c->audioFrame.no_channels];
+      NDIlib_util_audio_to_interleaved_32f_v2(audioFrameV2,
+                                              &c->audioFrame32fIlvd);
       break;
     case Grandi_audio_format_float_32_separate:
     default:
@@ -1122,20 +1089,17 @@ void dataReceiveExecute(napi_env env, void *data)
   }
 }
 
-void dataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
-{
+void dataReceiveComplete(napi_env env, napi_status asyncStatus, void *data) {
   dataCarrier *c = (dataCarrier *)data;
 
-  if (asyncStatus != napi_ok)
-  {
+  if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
     c->errorMsg = "Async data payload receive failed to complete.";
   }
   REJECT_STATUS;
 
   napi_status status;
-  switch (c->frameType)
-  {
+  switch (c->frameType) {
   case NDIlib_frame_type_video:
     videoReceiveComplete(env, asyncStatus, data);
     break;
@@ -1146,7 +1110,8 @@ void dataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
     metadataReceiveComplete(env, asyncStatus, data);
     break;
   case NDIlib_frame_type_error:
-    c->errorMsg = "Received error response from NDI data request. Connection lost.";
+    c->errorMsg =
+        "Received error response from NDI data request. Connection lost.";
     c->status = GRANDI_CONNECTION_LOST;
     REJECT_STATUS;
     break;
@@ -1154,7 +1119,8 @@ void dataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
     napi_value result_sc, param_sc;
     c->status = napi_create_object(env, &result_sc);
     REJECT_STATUS;
-    c->status = napi_create_string_utf8(env, "sourceChange", NAPI_AUTO_LENGTH, &param_sc);
+    c->status = napi_create_string_utf8(env, "sourceChange", NAPI_AUTO_LENGTH,
+                                        &param_sc);
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result_sc, "type", param_sc);
     REJECT_STATUS;
@@ -1167,7 +1133,8 @@ void dataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
     napi_value result, param;
     c->status = napi_create_object(env, &result);
     REJECT_STATUS;
-    c->status = napi_create_string_utf8(env, "statusChange", NAPI_AUTO_LENGTH, &param);
+    c->status =
+        napi_create_string_utf8(env, "statusChange", NAPI_AUTO_LENGTH, &param);
     REJECT_STATUS;
     c->status = napi_set_named_property(env, result, "type", param);
     REJECT_STATUS;
@@ -1182,8 +1149,7 @@ void dataReceiveComplete(napi_env env, napi_status asyncStatus, void *data)
   }
 }
 
-napi_value dataReceive(napi_env env, napi_callback_info info)
-{
-  return dataAndAudioReceive(env, info, "DataReceive",
-                             dataReceiveExecute, dataReceiveComplete);
+napi_value dataReceive(napi_env env, napi_callback_info info) {
+  return dataAndAudioReceive(env, info, "DataReceive", dataReceiveExecute,
+                             dataReceiveComplete);
 }

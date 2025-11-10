@@ -22,11 +22,12 @@
 #include <Processing.NDI.Lib.h>
 #include "node_api.h"
 
-// The three different formats of raw audio data supported by NDI utility functions
-typedef enum Grandi_audio_format_e
-{
+// The three different formats of raw audio data supported by NDI utility
+// functions
+typedef enum Grandi_audio_format_e {
   // Default NDI audio format
-  // Channels stored one after the other in each block - 32-bit floating point values
+  // Channels stored one after the other in each block - 32-bit floating point
+  // values
   Grandi_audio_format_float_32_separate = 0,
   // Alternative NDI audio foramt
   // Channels stored as channel-interleaved 32-bit floating point values
@@ -36,18 +37,19 @@ typedef enum Grandi_audio_format_e
   Grandi_audio_format_int_16_interleaved = 2
 } Grandi_audio_format_e;
 
-#define DECLARE_NAPI_METHOD(name, func) {name, 0, func, 0, 0, 0, napi_default, 0}
+#define DECLARE_NAPI_METHOD(name, func)                                        \
+  {name, 0, func, 0, 0, 0, napi_default, 0}
 
 // Handling NAPI errors - use "napi_status status;" where used
-#define CHECK_STATUS                                               \
-  if (checkStatus(env, status, __FILE__, __LINE__ - 1) != napi_ok) \
+#define CHECK_STATUS                                                           \
+  if (checkStatus(env, status, __FILE__, __LINE__ - 1) != napi_ok)             \
   return nullptr
-#define PASS_STATUS      \
-  if (status != napi_ok) \
+#define PASS_STATUS                                                            \
+  if (status != napi_ok)                                                       \
   return status
 
-napi_status checkStatus(napi_env env, napi_status status,
-                        const char *file, uint32_t line);
+napi_status checkStatus(napi_env env, napi_status status, const char *file,
+                        uint32_t line);
 
 // High resolution timing
 #define HR_TIME_POINT std::chrono::high_resolution_clock::time_point
@@ -76,8 +78,7 @@ napi_status checkArgs(napi_env env, napi_callback_info info, char *methodName,
 #define GRANDI_CONNECTION_LOST 4143
 #define GRANDI_SUCCESS 0
 
-struct carrier
-{
+struct carrier {
   virtual ~carrier() {}
   napi_ref passthru = nullptr;
   int32_t status = GRANDI_SUCCESS;
@@ -90,39 +91,38 @@ struct carrier
 void tidyCarrier(napi_env env, carrier *c);
 int32_t rejectStatus(napi_env env, carrier *c, const char *file, int32_t line);
 
-#define REJECT_STATUS                                             \
-  if (rejectStatus(env, c, __FILE__, __LINE__) != GRANDI_SUCCESS) \
+#define REJECT_STATUS                                                          \
+  if (rejectStatus(env, c, __FILE__, __LINE__) != GRANDI_SUCCESS)              \
     return;
-#define REJECT_RETURN                                             \
-  if (rejectStatus(env, c, __FILE__, __LINE__) != GRANDI_SUCCESS) \
+#define REJECT_RETURN                                                          \
+  if (rejectStatus(env, c, __FILE__, __LINE__) != GRANDI_SUCCESS)              \
     return promise;
 #define FLOATING_STATUS                                                        \
-  if (status != napi_ok)                                                       \
-  {                                                                            \
+  if (status != napi_ok) {                                                     \
     printf("Unexpected N-API status not OK in file %s at line %d value %i.\n", \
            __FILE__, __LINE__ - 1, status);                                    \
   }
 
-#define NAPI_THROW_ERROR(msg)                 \
-  {                                           \
-    char errorMsg[100];                       \
-    sprintf(errorMsg, msg);                   \
-    napi_throw_error(env, nullptr, errorMsg); \
-    return nullptr;                           \
+#define NAPI_THROW_ERROR(msg)                                                  \
+  {                                                                            \
+    char errorMsg[100];                                                        \
+    sprintf(errorMsg, msg);                                                    \
+    napi_throw_error(env, nullptr, errorMsg);                                  \
+    return nullptr;                                                            \
   }
 
-#define REJECT_ERROR(msg, status) \
-  {                               \
-    c->errorMsg = msg;            \
-    c->status = status;           \
-    REJECT_STATUS;                \
+#define REJECT_ERROR(msg, status)                                              \
+  {                                                                            \
+    c->errorMsg = msg;                                                         \
+    c->status = status;                                                        \
+    REJECT_STATUS;                                                             \
   }
 
-#define REJECT_ERROR_RETURN(msg, stat) \
-  {                                    \
-    c->errorMsg = msg;                 \
-    c->status = stat;                  \
-    REJECT_RETURN;                     \
+#define REJECT_ERROR_RETURN(msg, stat)                                         \
+  {                                                                            \
+    c->errorMsg = msg;                                                         \
+    c->status = stat;                                                          \
+    REJECT_RETURN;                                                             \
   }
 
 bool validColorFormat(NDIlib_recv_color_format_e format);
@@ -130,7 +130,8 @@ bool validBandwidth(NDIlib_recv_bandwidth_e bandwidth);
 bool validFrameFormat(NDIlib_frame_format_type_e format);
 bool validAudioFormat(Grandi_audio_format_e format);
 
-napi_status makeNativeSource(napi_env env, napi_value source, NDIlib_source_t *result);
+napi_status makeNativeSource(napi_env env, napi_value source,
+                             NDIlib_source_t *result);
 void freeNativeSource(NDIlib_source_t *source);
 
 #endif // GRANDI_UTIL_H

@@ -22,18 +22,16 @@
 
 napi_value routing(napi_env, napi_callback_info);
 
-struct routingCarrier : carrier
-{
-    char *name = nullptr;
-    char *groups = nullptr;
-    NDIlib_routing_instance_t routing;
-    ~routingCarrier()
-    {
-        if (name != nullptr)
-            free(name);
-        if (groups != nullptr)
-            free(groups);
-    }
+struct routingCarrier : carrier {
+  char *name = nullptr;
+  char *groups = nullptr;
+  NDIlib_routing_instance_t routing;
+  ~routingCarrier() {
+    if (name != nullptr)
+      free(name);
+    if (groups != nullptr)
+      free(groups);
+  }
 };
 
 #endif /* GRANDI_ROUTING_H */

@@ -27,27 +27,23 @@ napi_value metadataReceive(napi_env env, napi_callback_info info);
 napi_value dataReceive(napi_env env, napi_callback_info info);
 napi_value setReceiveTally(napi_env env, napi_callback_info info);
 
-struct receiveCarrier : carrier
-{
+struct receiveCarrier : carrier {
   NDIlib_source_t *source = nullptr;
   NDIlib_recv_color_format_e colorFormat = NDIlib_recv_color_format_fastest;
   NDIlib_recv_bandwidth_e bandwidth = NDIlib_recv_bandwidth_highest;
   bool allowVideoFields = true;
   char *name = nullptr;
   NDIlib_recv_instance_t recv;
-  ~receiveCarrier()
-  {
+  ~receiveCarrier() {
     free(name);
-    if (source != nullptr)
-    {
+    if (source != nullptr) {
       freeNativeSource(source);
       delete source;
     }
   }
 };
 
-struct dataCarrier : carrier
-{
+struct dataCarrier : carrier {
   uint32_t wait = 10000;
   NDIlib_recv_instance_t recv;
   NDIlib_frame_type_e frameType;
@@ -58,8 +54,7 @@ struct dataCarrier : carrier
   int32_t referenceLevel = 20;
   Grandi_audio_format_e audioFormat = Grandi_audio_format_float_32_separate;
   NDIlib_metadata_frame_t metadataFrame;
-  ~dataCarrier()
-  {
+  ~dataCarrier() {
     delete[] audioFrame16s.p_data;
     delete[] audioFrame32fIlvd.p_data;
   }

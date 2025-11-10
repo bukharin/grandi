@@ -32,8 +32,7 @@
 #include "grandi_routing.h"
 #include "node_api.h"
 
-napi_value version(napi_env env, napi_callback_info info)
-{
+napi_value version(napi_env env, napi_callback_info info) {
   napi_status status;
 
   const char *ndiVersion = NDIlib_version();
@@ -44,8 +43,7 @@ napi_value version(napi_env env, napi_callback_info info)
   return result;
 }
 
-napi_value isSupportedCPU(napi_env env, napi_callback_info info)
-{
+napi_value isSupportedCPU(napi_env env, napi_callback_info info) {
   napi_status status;
 
   napi_value result;
@@ -55,8 +53,7 @@ napi_value isSupportedCPU(napi_env env, napi_callback_info info)
   return result;
 }
 
-napi_value initialize(napi_env env, napi_callback_info info)
-{
+napi_value initialize(napi_env env, napi_callback_info info) {
   napi_status status;
 
   bool ok = NDIlib_initialize();
@@ -67,8 +64,7 @@ napi_value initialize(napi_env env, napi_callback_info info)
   return result;
 }
 
-napi_value destroy(napi_env env, napi_callback_info info)
-{
+napi_value destroy(napi_env env, napi_callback_info info) {
   napi_status status;
 
   NDIlib_destroy();
@@ -79,8 +75,7 @@ napi_value destroy(napi_env env, napi_callback_info info)
   return result;
 }
 
-napi_value Init(napi_env env, napi_value exports)
-{
+napi_value Init(napi_env env, napi_value exports) {
   napi_status status;
   napi_property_descriptor desc[] = {
       DECLARE_NAPI_METHOD("version", version),
@@ -91,7 +86,8 @@ napi_value Init(napi_env env, napi_value exports)
       DECLARE_NAPI_METHOD("send", send),
       DECLARE_NAPI_METHOD("receive", receive),
       DECLARE_NAPI_METHOD("routing", routing)};
-  status = napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
+  status = napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]),
+                                  desc);
   CHECK_STATUS;
 
   return exports;
