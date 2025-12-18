@@ -25,7 +25,7 @@ jobs:
           node-version: "24"
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --ignore-scripts
 
       - name: bundle typescript sources
         run: npm run build
