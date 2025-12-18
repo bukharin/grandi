@@ -1,83 +1,83 @@
 {
-	"name": "grandi",
-	"version": "1.0.0",
-	"description": "Node.JS native bindings to the Newtek NDI SDK.",
-	"homepage": "https://github.com/tux-tn/grandi#readme",
-	"keywords": [
-		"Newtek",
-		"NDI",
-		"network",
-		"device",
-		"interface"
-	],
-	"author": "Sarhan Aissi <npm@tux.tn>",
-	"license": "Apache-2.0",
-	"files": [
-		"dist",
-		"LICENSE",
-		"NOTICE",
-		"README.md"
-	],
-	"main": "./dist/index.mjs",
-	"types": "./dist/index.d.mts",
-	"exports": {
-		".": "./dist/index.mjs",
-		"./package.json": "./package.json"
-	},
-	"gypfile": true,
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/tux-tn/grandi.git"
-	},
-	"bugs": {
-		"url": "https://github.com/tux-tn/grandi/issues"
-	},
-	"optionalDependencies": {
-		"@grandi/linux-x64": "1.0.0",
-		"@grandi/linux-arm64": "1.0.0",
-		"@grandi/linux-armv7l": "1.0.0",
-		"@grandi/win32-x64": "1.0.0",
-		"@grandi/win32-ia32": "1.0.0",
-		"@grandi/darwin-universal": "1.0.0"
-	},
-	"dependencies": {
-		"cross-spawn": "7.0.6",
-		"cross-zip": "4.0.1",
-		"execa": "9.6.1",
-		"got": "14.6.5",
-		"node-gyp-build": "^4.8.4",
-		"shelljs": "0.10.0",
-		"tmp": "0.2.5"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "2.3.9",
-		"@types/bindings": "^1.5.5",
-		"@types/cross-zip": "^4.0.2",
-		"@types/node": "^25.0.2",
-		"@types/shelljs": "^0.10.0",
-		"@types/tmp": "^0.2.6",
-		"@vitest/coverage-v8": "^4.0.15",
-		"cross-env": "^10.1.0",
-		"shx": "0.4.0",
-		"standard-version": "^9.5.0",
-		"tsdown": "^0.18.0",
-		"typescript": "^5.9.3",
-		"vitest": "^4.0.15"
-	},
-	"scripts": {
-		"build": "tsdown",
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"test:unit": "vitest run test/unit",
-		"test:integration": "vitest run test/integration",
-		"bench": "node --expose-gc scripts/benchmark.mjs",
-		"test:coverage": "vitest run --coverage",
-		"format": "biome format",
-		"format:cpp": "clang-format -i lib/*.cc lib/*.h",
-		"lint": "biome lint",
-		"clean": "shx rm -rf ndi build"
-	},
-	"engines": {
-		"node": ">=20.19.5"
-	}
+  "name": "grandi",
+  "version": "1.1.0",
+  "description": "Node.JS native bindings to the Newtek NDI SDK.",
+  "homepage": "https://github.com/tux-tn/grandi#readme",
+  "keywords": [
+    "Newtek",
+    "NDI",
+    "network",
+    "device",
+    "interface"
+  ],
+  "author": "Sarhan Aissi <npm@tux.tn>",
+  "license": "Apache-2.0",
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "gypfile": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tux-tn/grandi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tux-tn/grandi/issues"
+  },
+  "optionalDependencies": {
+    "@grandi/linux-x64": "^1.0.0",
+    "@grandi/linux-arm64": "^1.0.0",
+    "@grandi/linux-armv7l": "^1.0.0",
+    "@grandi/win32-x64": "^1.0.0",
+    "@grandi/win32-ia32": "^1.0.0",
+    "@grandi/darwin-universal": "1.0.0"
+  },
+  "dependencies": {
+    "cross-spawn": "7.0.6",
+    "cross-zip": "4.0.1",
+    "execa": "9.6.1",
+    "got": "14.6.5",
+    "node-gyp-build": "^4.8.4",
+    "shelljs": "0.10.0",
+    "tmp": "0.2.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.9",
+    "@types/bindings": "^1.5.5",
+    "@types/cross-zip": "^4.0.2",
+    "@types/node": "^25.0.2",
+    "@types/shelljs": "^0.10.0",
+    "@types/tmp": "^0.2.6",
+    "@vitest/coverage-v8": "^4.0.15",
+    "cross-env": "^10.1.0",
+    "shx": "0.4.0",
+    "standard-version": "^9.5.0",
+    "tsdown": "^0.18.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run test/unit",
+    "test:integration": "vitest run test/integration",
+    "bench": "node --expose-gc scripts/benchmark.mjs",
+    "test:coverage": "vitest run --coverage",
+    "format": "biome format",
+    "format:cpp": "clang-format -i lib/*.cc lib/*.h",
+    "lint": "biome lint",
+    "clean": "shx rm -rf ndi build"
+  },
+  "engines": {
+    "node": ">=20.19.5"
+  }
 }

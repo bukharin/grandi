@@ -69,6 +69,25 @@ importers:
       vitest:
         specifier: ^4.0.15
         version: 4.0.15(@types/node@25.0.2)
+    optionalDependencies:
+      '@grandi/darwin-universal':
+        specifier: 1.0.0
+        version: 1.0.0
+      '@grandi/linux-arm64':
+        specifier: ^1.0.0
+        version: 1.0.0
+      '@grandi/linux-armv7l':
+        specifier: ^1.0.0
+        version: 1.0.0
+      '@grandi/linux-x64':
+        specifier: ^1.0.0
+        version: 1.0.0
+      '@grandi/win32-ia32':
+        specifier: ^1.0.0
+        version: 1.0.0
+      '@grandi/win32-x64':
+        specifier: ^1.0.0
+        version: 1.0.0
 
 packages:
 
@@ -319,6 +338,36 @@ packages:
   '@esbuild/win32-x64@0.25.12':
     resolution: {integrity: sha512-alJC0uCZpTFrSL0CCDjcgleBXPnCrEAhTBILpeAp7M/OFgoqtAetfBzX0xM00MUsVVPpVjlPuMbREqnZCXaTnA==}
     engines: {node: '>=18'}
+    cpu: [x64]
+    os: [win32]
+
+  '@grandi/darwin-universal@1.0.0':
+    resolution: {integrity: sha512-ftj4/amM08SCXf5mEOibAMZfijFhi7vdm9CXjLdL4YB4d3hJkFK/hDmP3JskW5pMupQOLBDTXOsP0RqQ1VCVag==}
+    cpu: [x64, arm64]
+    os: [darwin]
+
+  '@grandi/linux-arm64@1.0.0':
+    resolution: {integrity: sha512-AveostzDsr3a8xQJs/Y+cKd+V+kta3dTe3pc+ppv37LSRAGqRHbhoIE5aHntYkCF4ZgeWd5sExdGunXvEKEXgQ==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@grandi/linux-armv7l@1.0.0':
+    resolution: {integrity: sha512-CinwVyAlq6RcSWqXCzBAX/wbMvzSBlWeAz+SY7pKOC0Tz9jIu1Nd/y6LyDJ/YJjOeXWj/eFao5EGamgXoDY4Pw==}
+    cpu: [arm]
+    os: [linux]
+
+  '@grandi/linux-x64@1.0.0':
+    resolution: {integrity: sha512-gIRMdc7PlaLV6H8n80Izucsfn+4H9rjofUnxjMpirnDcUwgf2dDVjG20xSROh4tm9RQGe1l2BqumgjIfRripHw==}
+    cpu: [x64]
+    os: [linux]
+
+  '@grandi/win32-ia32@1.0.0':
+    resolution: {integrity: sha512-RuDknJ9sd9ZW6ts3JeT0sUuSLdCXIN2p14Z0pxgXKb6zWjhdVRHZjeOArHzOaD8G6DI6/oo5VhFq4mHG8hhpog==}
+    cpu: [ia32]
+    os: [win32]
+
+  '@grandi/win32-x64@1.0.0':
+    resolution: {integrity: sha512-mklxaAjLhrYtWGNQfyrHFx9cIND3WdzXGYgjKUkhTeozYdry0vRugQiWXOAQI5hLMlzNIaVOkffqxN4hffzKwA==}
     cpu: [x64]
     os: [win32]
 
@@ -2169,6 +2218,24 @@ snapshots:
     optional: true
 
   '@esbuild/win32-x64@0.25.12':
+    optional: true
+
+  '@grandi/darwin-universal@1.0.0':
+    optional: true
+
+  '@grandi/linux-arm64@1.0.0':
+    optional: true
+
+  '@grandi/linux-armv7l@1.0.0':
+    optional: true
+
+  '@grandi/linux-x64@1.0.0':
+    optional: true
+
+  '@grandi/win32-ia32@1.0.0':
+    optional: true
+
+  '@grandi/win32-x64@1.0.0':
     optional: true
 
   '@hutson/parse-repository-url@3.0.2': {}
