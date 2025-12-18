@@ -71,10 +71,16 @@ jobs:
       - name: Build addon (docker cross)
         if: ${{ matrix.dockerImage != '' }}
         run: |
-          docker run --rm -u $(id -u):$(id -g) -v $PWD:/input -w /input ${{ matrix.dockerImage }} /bin/bash -lc "\
-            npm install --ignore-scripts && \
-            node scripts/build-addon.mjs --platform ${{ matrix.platform }} --arch ${{ matrix.arch }} \
-          "
+          docker run --rm \
+            -u $(id -u):$(id -g) \
+            -e npm_config_cache=/tmp/npm-cache \
+            -e NPM_CONFIG_CACHE=/tmp/npm-cache \
+            -v $PWD:/input \
+            -w /input \
+            ${{ matrix.dockerImage }} /bin/bash -lc "\
+              npm install --ignore-scripts && \
+              node scripts/build-addon.mjs --platform ${{ matrix.platform }} --arch ${{ matrix.arch }} \
+            "
 
       - name: Publish package
         run: npm publish ./${{ matrix.pkgDir }} --provenance --access public

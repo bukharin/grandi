@@ -335,6 +335,12 @@ async function buildAddon(packageDir) {
 	shell.mkdir("-p", productDir);
 	const meta = TARGETS[targetKey];
 	const buildArch = meta?.gypArch ?? targetArch;
+	// Use a writable npm cache to avoid root-owned cache errors in containers.
+	const npmCacheDir =
+		process.env.npm_config_cache ??
+		process.env.NPM_CONFIG_CACHE ??
+		path.join(os.tmpdir(), "grandi-npm-cache");
+	shell.mkdir("-p", npmCacheDir);
 
 	await execa(
 		"npx",
@@ -345,7 +351,14 @@ async function buildAddon(packageDir) {
 			"--",
 			`-Dproduct_dir=${productDir}`,
 		],
-		{ stdio: "inherit" },
+		{
+			stdio: "inherit",
+			env: {
+				...process.env,
+				npm_config_cache: npmCacheDir,
+				NPM_CONFIG_CACHE: npmCacheDir,
+			},
+		},
 	);
 
 	const built = path.join("build", "Release", "grandi.node");
