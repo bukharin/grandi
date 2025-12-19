@@ -13,8 +13,6 @@ import type {
 	Source,
 } from "../../src/types";
 
-
-
 async function waitForSourceByName(
 	name: string,
 	timeoutMs = 15_000,
