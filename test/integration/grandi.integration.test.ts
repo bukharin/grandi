@@ -13,16 +13,7 @@ import type {
 	Source,
 } from "../../src/types";
 
-const addonCanLoad = (() => {
-	try {
-		nodeGypBuild(path.join(__dirname, "..", ".."));
-		return true;
-	} catch {
-		return false;
-	}
-})();
 
-const describeIntegration = addonCanLoad ? describe : describe.skip;
 
 async function waitForSourceByName(
 	name: string,
@@ -129,7 +120,7 @@ async function waitForVideoFrameSize(
 	);
 }
 
-describeIntegration("grandi native addon (integration)", () => {
+describe("grandi native addon (integration)", () => {
 	beforeAll(() => {
 		grandi.initialize();
 	});
@@ -151,7 +142,6 @@ describeIntegration("grandi native addon (integration)", () => {
 		expect(Array.isArray(finder.sources())).toBe(true);
 		expect(finder.destroy()).toBe(true);
 	});
-	// skip on CI systems where loopback NDI may not be available
 	test("can send frames that are received locally", async () => {
 		const senderName = `grandi-vitest-${Date.now()}`;
 		const sender = await grandi.send({

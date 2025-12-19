@@ -57,7 +57,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
-        run: npm install --ignore-scripts
+        run: npm install
 
       - name: Set explicit version
         if: ${{ inputs.version != '' }}
@@ -78,7 +78,7 @@ jobs:
             -v $PWD:/input \
             -w /input \
             ${{ matrix.dockerImage }} /bin/bash -lc "\
-              npm install --ignore-scripts && \
+              npm install && \
               node scripts/build-addon.mjs --platform ${{ matrix.platform }} --arch ${{ matrix.arch }} \
             "
 
