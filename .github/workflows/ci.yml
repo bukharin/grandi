@@ -47,9 +47,6 @@ jobs:
       - name: Build package typescript sources
         run: npm run build
 
-      - name: Prebuild Binaries
-        run: npm run prebuild
-      
       - name: Run unit tests
         run: npm run test:unit
 
