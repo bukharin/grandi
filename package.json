@@ -27,7 +27,7 @@
 	"gypfile": true,
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/tux-tn/grandi.git"
+		"url": "git+https://github.com/tux-tn/grandi.git"
 	},
 	"bugs": {
 		"url": "https://github.com/tux-tn/grandi/issues"

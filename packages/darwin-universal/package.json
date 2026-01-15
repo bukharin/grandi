@@ -4,7 +4,7 @@
 	"description": "Prebuilt grandi native addon for macOS universal (x64/arm64)",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/tux-tn/grandi.git"
+		"url": "git+https://github.com/tux-tn/grandi.git"
 	},
 	"license": "Apache-2.0",
 	"os": [
