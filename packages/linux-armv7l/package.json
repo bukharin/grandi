@@ -1,6 +1,6 @@
 {
 	"name": "@grandi/linux-armv7l",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"description": "Prebuilt grandi native addon for Linux armv7l",
 	"repository": {
 		"type": "git",
