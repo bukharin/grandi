@@ -84,5 +84,3 @@ jobs:
 
       - name: Publish package
         run: npm publish ./${{ matrix.pkgDir }} --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_BINDINGS_TOKEN }}
