@@ -97,9 +97,9 @@ describe("src/index entrypoint", () => {
 		const grandi = await import("../../src/index");
 
 		expect(nodeGypBuild).toHaveBeenCalledTimes(1);
-		expect(nodeGypBuild.mock.calls[0]?.[0]).toBe(
-			path.join(__dirname, "..", ".."),
-		);
+		const firstCall = (nodeGypBuild.mock.calls[0] ?? []) as unknown[];
+		const [firstArg] = firstCall;
+		expect(firstArg).toBe(path.join(__dirname, "..", ".."));
 
 		await grandi.find({ groups: "local" });
 		expect(addon.find).toHaveBeenLastCalledWith({ groups: "local" });
@@ -188,5 +188,46 @@ describe("src/index entrypoint", () => {
 		);
 		expect(grandiModule.initialize()).toBe(false);
 		expect(grandiModule.destroy()).toBe(false);
+	});
+
+	it("forwards options to addon methods on supported platforms", async () => {
+		const addon = createAddonMock();
+		restorePlatform = mockProcessProperty("platform", "linux");
+		restoreArch = mockProcessProperty("arch", "x64");
+		const nodeGypBuild = vi.fn(() => addon);
+		vi.doMock("node-gyp-build", () => ({ default: nodeGypBuild }));
+
+		const grandi = await import("../../src/index");
+
+		const sendOpts = { name: "unit-sender", clockVideo: true } as const;
+		await grandi.send(sendOpts as never);
+		expect(addon.send).toHaveBeenLastCalledWith(sendOpts);
+
+		const receiveOpts = {
+			source: { name: "source", urlAddress: "udp://127.0.0.1" },
+			colorFormat: grandi.ColorFormat.Best,
+			bandwidth: grandi.Bandwidth.Highest,
+			allowVideoFields: true,
+			name: "unit-recv",
+		};
+		await grandi.receive(receiveOpts as never);
+		expect(addon.receive).toHaveBeenLastCalledWith(receiveOpts);
+
+		const routingOpts = { name: "unit-route", groups: "g1" } as const;
+		await grandi.routing(routingOpts as never);
+		expect(addon.routing).toHaveBeenLastCalledWith(routingOpts);
+
+		const findOpts = {
+			showLocalSources: true,
+			groups: "g2",
+			extraIPs: "127.0.0.1",
+		};
+		await grandi.find(findOpts);
+		expect(addon.find).toHaveBeenLastCalledWith(findOpts);
+
+		grandi.initialize();
+		expect(addon.initialize).toHaveBeenCalled();
+		grandi.destroy();
+		expect(addon.destroy).toHaveBeenCalled();
 	});
 });
