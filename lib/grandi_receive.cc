@@ -882,11 +882,18 @@ napi_value dataAndAudioReceive(napi_env env, napi_callback_info info,
   REJECT_RETURN;
 
   if (argc >= 1) {
-    napi_value configValue, waitValue;
-    configValue = args[0];
+    napi_value configValue = args[0];
+    napi_value waitValue = nullptr;
+
     c->status = napi_typeof(env, configValue, &type);
     REJECT_RETURN;
-    waitValue = (type == napi_number) ? args[0] : args[1];
+
+    if (type == napi_number) {
+      waitValue = configValue;
+    } else if (argc >= 2) {
+      waitValue = args[1];
+    }
+
     if (type == napi_object) {
       bool isArray;
       c->status = napi_is_array(env, configValue, &isArray);
@@ -927,11 +934,15 @@ napi_value dataAndAudioReceive(napi_env env, napi_callback_info info,
             "Audio reference level must be a number if present.",
             GRANDI_INVALID_ARGS);
     }
-    c->status = napi_typeof(env, waitValue, &type);
-    REJECT_RETURN;
-    if (type == napi_number) {
-      c->status = napi_get_value_uint32(env, waitValue, &c->wait);
+
+    if (waitValue != nullptr) {
+      napi_valuetype waitType;
+      c->status = napi_typeof(env, waitValue, &waitType);
       REJECT_RETURN;
+      if (waitType == napi_number) {
+        c->status = napi_get_value_uint32(env, waitValue, &c->wait);
+        REJECT_RETURN;
+      }
     }
   }
 
