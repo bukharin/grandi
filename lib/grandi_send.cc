@@ -434,7 +434,7 @@ void sendComplete(napi_env env, napi_status asyncStatus, void *data) {
   REJECT_STATUS;
 
   napi_value tallyFn;
-  c->status = napi_create_function(env, "connections", NAPI_AUTO_LENGTH, tally,
+  c->status = napi_create_function(env, "tally", NAPI_AUTO_LENGTH, tally,
                                    nullptr, &tallyFn);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "tally", tallyFn);
