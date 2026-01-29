@@ -426,6 +426,10 @@ export interface Grandi {
 	 */
 	COLOR_FORMAT_FASTEST: ColorFormat;
 	/**
+	 * Alias of `ColorFormat.Best`.
+	 */
+	COLOR_FORMAT_BEST: ColorFormat;
+	/**
 	 * Alias of `ColorFormat.BGRX_BGRA_FLIPPED` (Windows-only).
 	 */
 	COLOR_FORMAT_BGRX_BGRA_FLIPPED: ColorFormat;
