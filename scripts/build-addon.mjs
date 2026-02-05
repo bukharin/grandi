@@ -88,7 +88,7 @@ const TARGETS = {
 	},
 	"darwin-arm64": {
 		pkgDir: "packages/darwin-universal",
-		gypArch: "arm64",
+		gypArch: "universal",
 		sources: [
 			"ndi/lib/macOS/libndi.dylib",
 			"ndi/lib/LICENSE.pdf",
@@ -97,7 +97,7 @@ const TARGETS = {
 	},
 	"darwin-x64": {
 		pkgDir: "packages/darwin-universal",
-		gypArch: "x64",
+		gypArch: "universal",
 		sources: [
 			"ndi/lib/macOS/libndi.dylib",
 			"ndi/lib/LICENSE.pdf",
